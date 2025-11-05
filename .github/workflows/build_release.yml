@@ -1,6 +1,7 @@
 name: Build and Release Executables
 
 on:
+
   push:
     tags:
       - 'v*.*.*'
@@ -9,31 +10,36 @@ on:
 jobs:
   build-release:
     strategy:
+
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        os_info:
+          - { os: "ubuntu-latest", path: "linux", ext: "" }
+          - { os: "windows-latest", path: "windows", ext: ".exe" }
+          - { os: "macos-latest", path: "macos", ext: "" }
+
+    runs-on: ${{ matrix.os_info.os }}
 
     steps:
+
       - name: Checkout main repository
         uses: actions/checkout@v4
 
-      - name: Checkout sub-checker repository
+      - name: Checkout sub-checker python files
         uses: actions/checkout@v4
         with:
           repository: arshiacomplus/sub-checker
           path: sub-checker
-      - name: List sub-checker contents for debugging
-        shell: bash
-        run: |
-          echo "--- Content of sub-checker directory ---"
-          ls -R sub-checker
+          sparse-checkout: |
+            cl.py
+            python_v2ray
+            requirements.txt
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install Nuitka and all dependencies
-
         shell: bash
         run: |
           python -m pip install --upgrade pip
@@ -43,42 +49,31 @@ jobs:
             pip install -r sub-checker/requirements.txt
           fi
 
-      - name: Prepare sub-checker binaries
-
+      - name: Prepare sub-checker with correct binaries
         shell: bash
         run: |
-          echo "Creating 'vendor' directory and moving binaries..."
+          echo "Creating 'vendor' directory..."
           mkdir -p sub-checker/vendor
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            mv sub-checker/xray/xray.exe sub-checker/vendor/xray.exe
-            mv sub-checker/hy2/hysteria.exe sub-checker/vendor/hysteria.exe
-          else
-            mv sub-checker/xray/xray sub-checker/vendor/xray
-            mv sub-checker/hy2/hysteria sub-checker/vendor/hysteria
-            chmod +x sub-checker/vendor/xray
-            chmod +x sub-checker/vendor/hysteria
-          fi
+
+          echo "Copying binaries from 'core_binaries/${{ matrix.os_info.path }}'..."
+          cp -r core_binaries/${{ matrix.os_info.path }}/* sub-checker/vendor/
+
+          # دادن دسترسی اجرایی (در ویندوز خطا می‌دهد ولی با `|| true` نادیده گرفته می‌شود)
+          chmod +x sub-checker/vendor/* || true
+
           echo "Verifying binaries location:"
           ls -l sub-checker/vendor
-          rm -rf sub-checker/xray sub-checker/hy2
 
       - name: Set output file names
         id: set_names
         shell: bash
         run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            echo "EXE_NAME=v2ray_scraper_ui_windows.exe" >> $GITHUB_ENV
-            echo "ASSET_NAME=v2ray_scraper_ui_windows.zip" >> $GITHUB_ENV
-          elif [ "${{ runner.os }}" == "macOS" ]; then
-            echo "EXE_NAME=v2ray_scraper_ui_macos" >> $GITHUB_ENV
-            echo "ASSET_NAME=v2ray_scraper_ui_macos.zip" >> $GITHUB_ENV
-          else
-            echo "EXE_NAME=v2ray_scraper_ui_linux" >> $GITHUB_ENV
-            echo "ASSET_NAME=v2ray_scraper_ui_linux.zip" >> $GITHUB_ENV
-          fi
+          OS_PATH=${{ matrix.os_info.path }}
+          EXE_EXT=${{ matrix.os_info.ext }}
+          echo "EXE_NAME=v2ray_scraper_ui_${OS_PATH}${EXE_EXT}" >> $GITHUB_ENV
+          echo "ASSET_NAME=v2ray_scraper_ui_${OS_PATH}.zip" >> $GITHUB_ENV
 
       - name: Compile with Nuitka
-
         shell: bash
         run: |
           python -m nuitka main.py \
@@ -94,9 +89,7 @@ jobs:
       - name: Compress executable for release
         shell: bash
         run: |
-
           if [ "${{ runner.os }}" == "Windows" ]; then
-
             7z a ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}
           else
             zip -j ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}
@@ -104,11 +97,8 @@ jobs:
 
       - name: Upload asset to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ env.ASSET_NAME }}
-          asset_name: ${{ env.ASSET_NAME }}
-          asset_content_type: application/zip
+          files: ${{ env.ASSET_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
