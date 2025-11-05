@@ -112,9 +112,9 @@ jobs:
         shell: bash
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
-            7z a ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}
+            7z a ${{ env.ASSET_NAME }} ./${{ env.EXE_NAME }}
           else
-            zip -j ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}
+            zip -j ${{ env.ASSET_NAME }} ./${{ env.EXE_NAME }}
           fi
       - name: Upload asset to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
