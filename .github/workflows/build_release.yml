@@ -1,7 +1,6 @@
 name: Build and Release Executables
 
 on:
-
   push:
     tags:
       - 'v*.*.*'
@@ -12,15 +11,25 @@ jobs:
     strategy:
 
       matrix:
-        os_info:
-          - { os: "ubuntu-latest", path: "linux", ext: "" }
-          - { os: "windows-latest", path: "windows", ext: ".exe" }
-          - { os: "macos-latest", path: "macos", ext: "" }
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+        include:
+          - os: ubuntu-latest
+            asset_keyword: "linux-64"
+            os_path: "linux"
+            ext: ""
+          - os: windows-latest
+            asset_keyword: "windows-64"
+            os_path: "windows"
+            ext: ".exe"
+          - os: macos-latest
+            asset_keyword: "macos-arm64" # برای مک‌های جدید Apple Silicon
+            os_path: "macos"
+            ext: ""
 
-    runs-on: ${{ matrix.os_info.os }}
+    runs-on: ${{ matrix.os }}
 
     steps:
-
       - name: Checkout main repository
         uses: actions/checkout@v4
 
@@ -49,27 +58,40 @@ jobs:
             pip install -r sub-checker/requirements.txt
           fi
 
-      - name: Prepare sub-checker with correct binaries
+      - name: Download and Prepare Core Binaries
         shell: bash
         run: |
-          echo "Creating 'vendor' directory..."
+          echo "Preparing 'sub-checker/vendor' directory..."
           mkdir -p sub-checker/vendor
-
-          echo "Copying binaries from 'core_binaries/${{ matrix.os_info.path }}'..."
-          cp -r core_binaries/${{ matrix.os_info.path }}/* sub-checker/vendor/
-
-          # دادن دسترسی اجرایی (در ویندوز خطا می‌دهد ولی با `|| true` نادیده گرفته می‌شود)
+          echo "Fetching latest Xray-core URL for ${{ matrix.asset_keyword }}..."
+          XRAY_URL=$(curl -s "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep "browser_download_url.*${{ matrix.asset_keyword }}.zip" | cut -d '"' -f 4 | head -n 1)
+          
+          if [ -z "$XRAY_URL" ]; then
+            echo "::error::Could not find Xray-core download URL for '${{ matrix.asset_keyword }}'. Aborting."
+            exit 1
+          fi
+          
+          echo "Downloading Xray from $XRAY_URL"
+          curl -L -o xray.zip "$XRAY_URL"
+          
+          echo "Extracting Xray binary..."
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            7z x xray.zip -o"sub-checker/vendor" xray.exe geosite.dat geoip.dat
+          else
+            unzip -o xray.zip -d sub-checker/vendor xray geosite.dat geoip.dat
+          fi
+          rm xray.zip
+          
           chmod +x sub-checker/vendor/* || true
-
-          echo "Verifying binaries location:"
+          echo "--- Binaries in vendor directory: ---"
           ls -l sub-checker/vendor
 
       - name: Set output file names
         id: set_names
         shell: bash
         run: |
-          OS_PATH=${{ matrix.os_info.path }}
-          EXE_EXT=${{ matrix.os_info.ext }}
+          OS_PATH=${{ matrix.os_path }}
+          EXE_EXT=${{ matrix.ext }}
           echo "EXE_NAME=v2ray_scraper_ui_${OS_PATH}${EXE_EXT}" >> $GITHUB_ENV
           echo "ASSET_NAME=v2ray_scraper_ui_${OS_PATH}.zip" >> $GITHUB_ENV
 
