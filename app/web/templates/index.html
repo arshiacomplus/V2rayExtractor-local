@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V2Ray Scraper UI</title>
+    <!-- <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet"> -->
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+</head>
+<body>
+    <main class="container">
+        <div class="glass-card">
+            <header>
+                <h1>V2Ray Config Scraper</h1>
+                <p>Enter Telegram channel links to scrape and test configs.</p>
+            </header>
+            <form id="scrape-form">
+                <div class="form-group">
+                    <label for="urls-input">Telegram Channel Links (one per line)</label>
+                    <textarea id="urls-input" name="urls" rows="6" placeholder="https://t.me/example_channel_1&#10;https://t.me/example_channel_2"></textarea>
+                </div>
+                <div class="form-group options">
+                    <label class="switch">
+                        <input type="checkbox" id="location-switch" name="get_location" value="true">
+                        <span class="slider"></span>
+                    </label>
+                    <span>Add Country Location to Configs</span>
+                </div>
+                <button type="submit" id="scrape-btn">
+                    <span class="btn-icon">🔍</span>
+                    <span class="btn-text">Scrape & Test</span>
+                </button>
+            </form>
+            <div id="results-section" class="results-container" style="display: none;">
+                <label for="results-output">Results</label>
+                <textarea id="results-output" rows="10" readonly placeholder="Working configs will appear here..."></textarea>
+                <button type="button" id="save-btn">💾 Save to File</button>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>by arshiacomplus 💖</p>
+    </footer>
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>
