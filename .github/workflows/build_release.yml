@@ -1,18 +1,14 @@
 name: Build and Release Executables
-
 on:
   push:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
-
 jobs:
   build-release:
     strategy:
       matrix:
-        # فقط ویندوز و لینوکس باقی مانده‌اند
         os: [ubuntu-latest, windows-latest]
-        
         include:
           - os: ubuntu-latest
             asset_keyword: "linux-64"
@@ -22,13 +18,15 @@ jobs:
             asset_keyword: "windows-64"
             os_path: "windows"
             ext: ".exe"
-            
     runs-on: ${{ matrix.os }}
-
     steps:
       - name: Checkout main repository
         uses: actions/checkout@v4
-
+      - name: Disable Windows Defender (Windows only)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Add-MpPreference -ExclusionPath (Get-Location)
       - name: Checkout sub-checker python files
         uses: actions/checkout@v4
         with:
@@ -38,12 +36,10 @@ jobs:
             cl.py
             python_v2ray
             requirements.txt
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install Nuitka and all dependencies
         shell: bash
         run: |
@@ -53,7 +49,6 @@ jobs:
           if [ -f sub-checker/requirements.txt ]; then
             pip install -r sub-checker/requirements.txt
           fi
-
       - name: Download and Prepare Core Binaries
         shell: bash
         run: |
@@ -61,15 +56,12 @@ jobs:
           mkdir -p sub-checker/vendor
           echo "Fetching latest Xray-core URL for ${{ matrix.asset_keyword }}..."
           XRAY_URL=$(curl -s "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep "browser_download_url.*${{ matrix.asset_keyword }}.zip" | cut -d '"' -f 4 | head -n 1)
-          
           if [ -z "$XRAY_URL" ]; then
             echo "::error::Could not find Xray-core download URL for '${{ matrix.asset_keyword }}'. Aborting."
             exit 1
           fi
-          
           echo "Downloading Xray from $XRAY_URL"
           curl -L -o xray.zip "$XRAY_URL"
-          
           echo "Extracting Xray binary..."
           if [ "${{ runner.os }}" == "Windows" ]; then
             7z x xray.zip -o"sub-checker/vendor" xray.exe geosite.dat geoip.dat
@@ -77,11 +69,9 @@ jobs:
             unzip -o xray.zip -d sub-checker/vendor xray geosite.dat geoip.dat
           fi
           rm xray.zip
-          
           chmod +x sub-checker/vendor/* || true
           echo "--- Binaries in vendor directory: ---"
           ls -l sub-checker/vendor
-
       - name: Set output file names
         id: set_names
         shell: bash
@@ -90,7 +80,6 @@ jobs:
           EXE_EXT=${{ matrix.ext }}
           echo "EXE_NAME=v2ray_scraper_ui_${OS_PATH}${EXE_EXT}" >> $GITHUB_ENV
           echo "ASSET_NAME=v2ray_scraper_ui_${OS_PATH}.zip" >> $GITHUB_ENV
-
       - name: Compile with Nuitka
         shell: bash
         run: |
@@ -104,7 +93,6 @@ jobs:
             --include-data-dir=sub-checker=sub-checker \
             --windows-console-mode=disable \
             --assume-yes-for-downloads
-
       - name: Compress executable for release
         shell: bash
         run: |
@@ -113,7 +101,6 @@ jobs:
           else
             zip -j ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}
           fi
-
       - name: Upload asset to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
