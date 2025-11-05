@@ -87,13 +87,27 @@ jobs:
             --onefile \
             --output-dir=dist \
             --output-filename=${{ env.EXE_NAME }} \
-            --remove-output \
             --follow-imports \
-            --no-remove-build-dir \
             --include-data-dir=app/web=app/web \
             --include-data-dir=sub-checker=sub-checker \
             --windows-console-mode=disable \
             --assume-yes-for-downloads
+      - name: Move Executable and Cleanup
+        shell: bash
+        run: |
+          echo "Moving executable to root..."
+
+          find ./dist -name "${{ env.EXE_NAME }}" -exec mv {} . \;
+
+          echo "Waiting for 5 seconds for file handles to be released..."
+          sleep 5
+
+          echo "Cleaning up build directory..."
+          rm -rf ./dist
+
+          echo "Final executable location:"
+          ls -l ${{ env.EXE_NAME }}
+
       - name: Compress executable for release
         shell: bash
         run: |
