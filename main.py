@@ -18,7 +18,7 @@ app_dir = os.path.join(BASE_DIR, "app")
 app = FastAPI(
     title="V2Ray Scraper Web UI",
     description="A web interface by arshiacomplus for scraping and checking V2Ray configs.",
-    version="1.0.1"
+    version="1.0.0"
 )
 
 app.mount("/static", StaticFiles(directory=os.path.join(app_dir, "web", "static")), name="static")
