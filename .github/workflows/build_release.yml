@@ -61,8 +61,6 @@ jobs:
             --follow-imports \
             --include-data-dir=app/web=app/web \
             --include-data-dir=sub-checker/vendor=sub-checker/vendor \
-            --plugin-enable=fastapi \
-            --plugin-enable=pyside6 \
             --windows-disable-console \
             main.py
 
