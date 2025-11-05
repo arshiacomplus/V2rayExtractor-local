@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-release:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Nuitka and dependencies
+      - name: Install Nuitka and all dependencies
         run: |
           python -m pip install --upgrade pip
           pip install nuitka
@@ -37,48 +37,66 @@ jobs:
             pip install -r sub-checker/requirements.txt
           fi
 
-      - name: Set executable name based on OS
-        id: set_names
+      - name: Prepare sub-checker binaries
         run: |
+          echo "Creating 'vendor' directory and moving binaries..."
+          mkdir -p sub-checker/vendor
           if [ "${{ runner.os }}" == "Windows" ]; then
-            echo "exe_name=v2ray_scraper_ui_windows.exe" >> $GITHUB_ENV
-            echo "asset_name=v2ray_scraper_ui_windows.zip" >> $GITHUB_ENV
-          elif [ "${{ runner.os }}" == "macOS" ]; then
-            echo "exe_name=v2ray_scraper_ui_macos" >> $GITHUB_ENV
-            echo "asset_name=v2ray_scraper_ui_macos.zip" >> $GITHUB_ENV
+            mv sub-checker/xray/xray.exe sub-checker/vendor/xray.exe
+            mv sub-checker/hy2/hysteria.exe sub-checker/vendor/hysteria.exe
           else
-            echo "exe_name=v2ray_scraper_ui_linux" >> $GITHUB_ENV
-            echo "asset_name=v2ray_scraper_ui_linux.zip" >> $GITHUB_ENV
+            mv sub-checker/xray/xray sub-checker/vendor/xray
+            mv sub-checker/hy2/hysteria sub-checker/vendor/hysteria
+            chmod +x sub-checker/vendor/xray
+            chmod +x sub-checker/vendor/hysteria
           fi
 
-      - name: Compile with Nuitka
-        run: |
-          python -m nuitka \
-            --onefile \
-            --output-dir=dist \
-            --output-filename=${{ env.exe_name }} \
-            --remove-output \
-            --follow-imports \
-            --include-data-dir=app/web=app/web \
-            --include-data-dir=sub-checker/vendor=sub-checker/vendor \
-            --windows-disable-console \
-            main.py
+          echo "Verifying binaries location:"
+          ls -l sub-checker/vendor
+          rm -rf sub-checker/xray sub-checker/hy2
 
-      - name: Compress executable
+      - name: Set output file names
+        id: set_names
         shell: bash
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
-            7z a ${{ env.asset_name }} ./dist/${{ env.exe_name }}
+            echo "EXE_NAME=v2ray_scraper_ui_windows.exe" >> $GITHUB_ENV
+            echo "ASSET_NAME=v2ray_scraper_ui_windows.zip" >> $GITHUB_ENV
+          elif [ "${{ runner.os }}" == "macOS" ]; then
+            echo "EXE_NAME=v2ray_scraper_ui_macos" >> $GITHUB_ENV
+            echo "ASSET_NAME=v2ray_scraper_ui_macos.zip" >> $GITHUB_ENV
           else
-            zip -j ${{ env.asset_name }} ./dist/${{ env.exe_name }}
+            echo "EXE_NAME=v2ray_scraper_ui_linux" >> $GITHUB_ENV
+            echo "ASSET_NAME=v2ray_scraper_ui_linux.zip" >> $GITHUB_ENV
+          fi
+      - name: Compile with Nuitka
+        run: |
+          python -m nuitka main.py \
+            --onefile \
+            --output-dir=dist \
+            --output-filename=${{ env.EXE_NAME }} \
+            --remove-output \
+            --follow-imports \
+            --include-data-dir=app/web=app/web \
+            --include-data-dir=sub-checker=sub-checker \
+            --windows-disable-console
+
+      - name: Compress executable for release
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            powershell Compress-Archive -Path ./dist/${{ env.EXE_NAME }} -DestinationPath ${{ env.ASSET_NAME }}
+          else
+            zip -j ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}
           fi
 
-      - name: Upload artifact to release
+      - name: Upload asset to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ env.asset_name }}
-          asset_name: ${{ env.asset_name }}
+          asset_path: ./${{ env.ASSET_NAME }}
+          asset_name: ${{ env.ASSET_NAME }}
           asset_content_type: application/zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
