@@ -20,13 +20,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            asset_keyword: "linux-64"
             os_path: "linux"
             ext: ""
+            asset_keyword: "linux-64"
           - os: windows-latest
-            asset_keyword: "windows-64"
             os_path: "windows"
             ext: ".exe"
+            asset_keyword: "windows-64"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout main repository
@@ -93,7 +93,7 @@ jobs:
       - name: Upload Artifact for Release
         uses: actions/upload-artifact@v4
         with:
-          name: release-assets
+          name: release-asset-${{ matrix.os_path }}
           path: ${{ env.ASSET_NAME }}
   release:
     needs: build
@@ -109,6 +109,6 @@ jobs:
           tag_name: ${{ github.event.inputs.tag_name }}
           name: ${{ github.event.inputs.release_title }}
           body: ${{ github.event.inputs.release_body }}
-          files: release-assets/*.zip
+          files: artifacts/**/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
