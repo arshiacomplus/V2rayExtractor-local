@@ -89,6 +89,7 @@ jobs:
             --output-filename=${{ env.EXE_NAME }} \
             --remove-output \
             --follow-imports \
+            --no-remove-build-dir \
             --include-data-dir=app/web=app/web \
             --include-data-dir=sub-checker=sub-checker \
             --windows-console-mode=disable \
