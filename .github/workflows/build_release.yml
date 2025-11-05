@@ -29,6 +29,8 @@ jobs:
           python-version: '3.11'
 
       - name: Install Nuitka and all dependencies
+
+        shell: bash
         run: |
           python -m pip install --upgrade pip
           pip install nuitka
@@ -38,6 +40,8 @@ jobs:
           fi
 
       - name: Prepare sub-checker binaries
+
+        shell: bash
         run: |
           echo "Creating 'vendor' directory and moving binaries..."
           mkdir -p sub-checker/vendor
@@ -50,7 +54,6 @@ jobs:
             chmod +x sub-checker/vendor/xray
             chmod +x sub-checker/vendor/hysteria
           fi
-
           echo "Verifying binaries location:"
           ls -l sub-checker/vendor
           rm -rf sub-checker/xray sub-checker/hy2
@@ -69,7 +72,10 @@ jobs:
             echo "EXE_NAME=v2ray_scraper_ui_linux" >> $GITHUB_ENV
             echo "ASSET_NAME=v2ray_scraper_ui_linux.zip" >> $GITHUB_ENV
           fi
+
       - name: Compile with Nuitka
+
+        shell: bash
         run: |
           python -m nuitka main.py \
             --onefile \
@@ -84,8 +90,10 @@ jobs:
       - name: Compress executable for release
         shell: bash
         run: |
+
           if [ "${{ runner.os }}" == "Windows" ]; then
-            powershell Compress-Archive -Path ./dist/${{ env.EXE_NAME }} -DestinationPath ${{ env.ASSET_NAME }}
+
+            7z a ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}
           else
             zip -j ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}
           fi
