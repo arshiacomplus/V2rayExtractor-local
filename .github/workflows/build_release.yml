@@ -101,7 +101,8 @@ jobs:
             --follow-imports \
             --include-data-dir=app/web=app/web \
             --include-data-dir=sub-checker=sub-checker \
-            --windows-disable-console
+            --windows-console-mode=disable \
+            --assume-yes-for-downloads
 
       - name: Compress executable for release
         shell: bash
