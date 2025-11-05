@@ -22,7 +22,11 @@ jobs:
         with:
           repository: arshiacomplus/sub-checker
           path: sub-checker
-
+      - name: List sub-checker contents for debugging
+        shell: bash
+        run: |
+          echo "--- Content of sub-checker directory ---"
+          ls -R sub-checker
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
