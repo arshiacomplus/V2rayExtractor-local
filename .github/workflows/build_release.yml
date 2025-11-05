@@ -9,10 +9,9 @@ on:
 jobs:
   build-release:
     strategy:
-
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        
+        os: [ubuntu-latest, windows-latest]
+
         include:
           - os: ubuntu-latest
             asset_keyword: "linux-64"
@@ -22,10 +21,6 @@ jobs:
             asset_keyword: "windows-64"
             os_path: "windows"
             ext: ".exe"
-          - os: macos-latest
-            asset_keyword: "macos-arm64" # برای مک‌های جدید Apple Silicon
-            os_path: "macos"
-            ext: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -65,15 +60,15 @@ jobs:
           mkdir -p sub-checker/vendor
           echo "Fetching latest Xray-core URL for ${{ matrix.asset_keyword }}..."
           XRAY_URL=$(curl -s "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep "browser_download_url.*${{ matrix.asset_keyword }}.zip" | cut -d '"' -f 4 | head -n 1)
-          
+
           if [ -z "$XRAY_URL" ]; then
             echo "::error::Could not find Xray-core download URL for '${{ matrix.asset_keyword }}'. Aborting."
             exit 1
           fi
-          
+
           echo "Downloading Xray from $XRAY_URL"
           curl -L -o xray.zip "$XRAY_URL"
-          
+
           echo "Extracting Xray binary..."
           if [ "${{ runner.os }}" == "Windows" ]; then
             7z x xray.zip -o"sub-checker/vendor" xray.exe geosite.dat geoip.dat
@@ -81,7 +76,7 @@ jobs:
             unzip -o xray.zip -d sub-checker/vendor xray geosite.dat geoip.dat
           fi
           rm xray.zip
-          
+
           chmod +x sub-checker/vendor/* || true
           echo "--- Binaries in vendor directory: ---"
           ls -l sub-checker/vendor
