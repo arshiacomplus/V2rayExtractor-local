@@ -98,26 +98,36 @@ jobs:
             cl.py
             python_v2ray
             requirements.txt
-      - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v3
-      - name: Build for ARM64 inside a Docker container
-        run: |
-          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace \
-            --platform linux/arm64 python:3.11-slim /bin/bash -c "
-            apt-get update && apt-get install -y zip curl ca-certificates patchelf build-essential
+      - name: Build for Termux (ARM64)
+        uses: termux/termux-docker@v3.1.0
+        with:
+          run: |
+            echo "Updating packages and installing dependencies..."
+            pkg update -y
+            pkg install -y python git curl zip unzip patchelf build-essential
+            echo "Installing Python packages..."
             pip install nuitka
             pip install -r requirements.txt
             if [ -f sub-checker/requirements.txt ]; then pip install -r sub-checker/requirements.txt; fi
+            echo "Downloading ARM binaries for Xray..."
             mkdir -p sub-checker/vendor
             ARM_KEYWORD='linux-arm64-v8a'
-            XRAY_URL=\$(curl -s 'https://api.github.com/repos/XTLS/Xray-core/releases/latest' | grep 'browser_download_url.*'\"\$ARM_KEYWORD\"'.zip' | cut -d '\"' -f 4 | head -n 1)
-            curl -L -o xray.zip \"\$XRAY_URL\"
+            XRAY_URL=$(curl -s 'https://api.github.com/repos/XTLS/Xray-core/releases/latest' | grep "browser_download_url.*${ARM_KEYWORD}.zip" | cut -d '"' -f 4 | head -n 1)
+            curl -L -o xray.zip "$XRAY_URL"
             unzip -o xray.zip -d sub-checker/vendor xray geosite.dat geoip.dat
             rm xray.zip
             chmod +x sub-checker/vendor/xray
-            python -m nuitka main.py --onefile --output-dir=dist --output-filename=v2ray_scraper_ui_linux-arm64 --follow-imports --include-data-dir=app/web=app/web --include-data-dir=sub-checker=sub-checker --assume-yes-for-downloads
+            echo "Starting Nuitka compilation for ARM64..."
+            python -m nuitka main.py \
+              --onefile \
+              --output-dir=dist \
+              --output-filename=v2ray_scraper_ui_linux-arm64 \
+              --follow-imports \
+              --include-data-dir=app/web=app/web \
+              --include-data-dir=sub-checker=sub-checker \
+              --assume-yes-for-downloads
+            echo "Compressing the final executable..."
             zip -j v2ray_scraper_ui_linux-arm64.zip ./dist/v2ray_scraper_ui_linux-arm64
-            "
       - name: Upload ARM Artifact
         uses: actions/upload-artifact@v4
         with:
