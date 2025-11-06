@@ -60,39 +60,16 @@ if [[ -n "$PREFIX" ]]; then
     fi
     cd "$INSTALL_PATH"
 
-    echo "Step 2: Preparing binaries..."
-    if [ ! -d "sub-checker/vendor" ]; then
-        mkdir -p sub-checker/vendor
-        XRAY_REPO="GFW-knocker/Xray-core"
-        XRAY_TAG="v1.25.8-mahsa-r1"
-        HYSTERIA_REPO="apernet/hysteria"
-        HYSTERIA_TAG="app/v2.6.5"
-        XRAY_ASSET="Xray-linux-arm64-v8a.zip"
-        HYSTERIA_ASSET="hysteria-linux-arm64"
 
-        echo "Downloading Xray ($XRAY_TAG)..."
-        XRAY_URL="https://github.com/$XRAY_REPO/releases/download/$XRAY_TAG/$XRAY_ASSET"
-        curl -L -o xray.zip "$XRAY_URL"
-        unzip -j xray.zip "xray" -d "sub-checker/vendor"
-        mv "sub-checker/vendor/xray" "sub-checker/vendor/xray_linux"
-        rm xray.zip
 
-        echo "Downloading Hysteria ($HYSTERIA_TAG)..."
-        HYSTERIA_URL="https://github.com/$HYSTERIA_REPO/releases/download/app%2Fv2.6.5/$HYSTERIA_ASSET"
-        curl -L -o "sub-checker/vendor/hysteria_linux" "$HYSTERIA_URL"
-        chmod +x sub-checker/vendor/*
-    else
-        echo "Binaries already prepared. Skipping."
-    fi
-
-    echo "Step 3: Installing/Updating Python packages..."
+    echo "Step 2: Installing/Updating Python packages..."
     pip install -r requirements.txt
     if [ -f "sub-checker/requirements.txt" ]; then pip install -r "sub-checker/requirements.txt"; fi
 
     echo "$APP_V" > "$APP_VERSION_FILE"
     echo "$CORE_V" > "$CORE_VERSION_FILE"
 
-    echo "Step 4: Ensuring '$CMD_NAME' command exists..."
+    echo "Step 3: Ensuring '$CMD_NAME' command exists..."
     if [ ! -f "$LAUNCHER_PATH" ]; then
         cat << EOF > "$LAUNCHER_PATH"
 #!/bin/bash
@@ -106,7 +83,7 @@ EOF
     fi
 
     echo -e "${GREEN}Installation/Update complete!${NC}"
-    echo "Run the application by typing: ${YELLOW}$CMD_NAME${NC}"
+    echo  -e "Run the application by typing: ${YELLOW}$CMD_NAME${NC}"
 else
     echo "Standard Linux/macOS environment detected. Installing pre-compiled binary..."
     echo "Step 1: Checking dependencies..."
