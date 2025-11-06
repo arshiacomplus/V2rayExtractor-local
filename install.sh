@@ -1,9 +1,17 @@
+#!/bin/bash
+# V2L - Final Bulletproof Installer, Updater & Launcher
+# Created by arshiacomplus
+
 set -e
+
+# --- Configuration ---
 CMD_NAME="v2l"
 REPO="arshiacomplus/V2rayExtractor-local"
 SUB_CHECKER_REPO="arshiacomplus/sub-checker"
 APP_V="1.0.0"
 CORE_V="1.1"
+
+# --- Paths & Colors ---
 INSTALL_PATH="$HOME/.$CMD_NAME"
 SUB_CHECKER_PATH="$INSTALL_PATH/sub-checker"
 APP_VERSION_FILE="$INSTALL_PATH/.app_version"
@@ -12,39 +20,48 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
+
+# --- Main Logic for Termux ---
 if [[ -n "$PREFIX" ]]; then
     LAUNCHER_PATH="$PREFIX/bin/$CMD_NAME"
+
     if [ -f "$LAUNCHER_PATH" ] && \
-       [ -f "$APP_VERSION_FILE" ] && [ "$(cat "$APP_VERSION_FILE")" == "$APP_V" ] && \
-       [ -f "$CORE_VERSION_FILE" ] && [ "$(cat "$CORE_VERSION_FILE")" == "$CORE_V" ]; then
+      [ -d "$INSTALL_PATH" ] && \
+      [ -d "$SUB_CHECKER_PATH" ] && \
+      [ -f "$APP_VERSION_FILE" ] && [ "$(cat "$APP_VERSION_FILE")" == "$APP_V" ] && \
+      [ -f "$CORE_VERSION_FILE" ] && [ "$(cat "$CORE_VERSION_FILE")" == "$CORE_V" ]; then
+
         echo -e "${GREEN}V2L is up-to-date (App: v$APP_V, Core: v$CORE_V). Launching...${NC}"
         $CMD_NAME
         exit 0
     fi
+
     echo -e "${BLUE}--- V2L Setup / Update Required ---${NC}"
+
     echo "Step 1: Ensuring system dependencies are installed..."
     pkg update -y
     pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
+
     if [ -d "$SUB_CHECKER_PATH" ] && [ -f "$CORE_VERSION_FILE" ] && [ "$(cat "$CORE_VERSION_FILE")" == "$CORE_V" ]; then
-        echo -e "${GREEN}Core components (sub-checker) are up-to-date. Skipping.${NC}"
+        echo -e "${GREEN}Core components (sub-checker) are up-to-date. Pulling main app updates...${NC}"
+        cd "$INSTALL_PATH" && git pull origin main
     else
         echo -e "${YELLOW}Core components are outdated or missing. Performing a full clean installation...${NC}"
         rm -rf "$INSTALL_PATH"
-    fi
-    if [ -d "$INSTALL_PATH" ]; then
-        echo "Updating main application..."
-        cd "$INSTALL_PATH"
-        git pull origin main || git clone https://github.com/$REPO.git "$INSTALL_PATH"
-    else
         echo "Cloning main application..."
         git clone https://github.com/$REPO.git "$INSTALL_PATH"
+        echo "Cloning required files from sub-checker..."
+        cd "$INSTALL_PATH"
+        git clone --depth 1 --no-checkout "https://github.com/$SUB_CHECKER_REPO.git" sub-checker
+        cd sub-checker
+        git sparse-checkout set cl.py python_v2ray requirements.txt
+        git checkout
+        cd ..
     fi
     cd "$INSTALL_PATH"
-    if [ ! -d "$SUB_CHECKER_PATH" ]; then
-        echo "Cloning sub-checker..."
-        git clone --depth 1 --filter=blob:none --sparse https://github.com/$SUB_CHECKER_REPO.git sub-checker
-        (cd sub-checker && git sparse-checkout set cl.py python_v2ray requirements.txt)
-        echo "Downloading and preparing core binaries..."
+
+    echo "Step 2: Preparing binaries..."
+    if [ ! -d "sub-checker/vendor" ]; then
         mkdir -p sub-checker/vendor
         XRAY_REPO="GFW-knocker/Xray-core"
         XRAY_TAG="v1.25.8-mahsa-r1"
@@ -52,23 +69,33 @@ if [[ -n "$PREFIX" ]]; then
         HYSTERIA_TAG="app/v2.6.5"
         XRAY_ASSET="Xray-linux-arm64-v8a.zip"
         HYSTERIA_ASSET="hysteria-linux-arm64"
+
+        echo "Downloading Xray ($XRAY_TAG)..."
         XRAY_URL="https://github.com/$XRAY_REPO/releases/download/$XRAY_TAG/$XRAY_ASSET"
         curl -L -o xray.zip "$XRAY_URL"
         unzip -j xray.zip "xray" -d "sub-checker/vendor"
         mv "sub-checker/vendor/xray" "sub-checker/vendor/xray_linux"
         rm xray.zip
+
+        echo "Downloading Hysteria ($HYSTERIA_TAG)..."
         HYSTERIA_URL="https://github.com/$HYSTERIA_REPO/releases/download/app%2Fv2.6.5/$HYSTERIA_ASSET"
         curl -L -o "sub-checker/vendor/hysteria_linux" "$HYSTERIA_URL"
         chmod +x sub-checker/vendor/*
+    else
+        echo "Binaries already prepared. Skipping."
     fi
-    echo "Step 4: Installing/Updating Python packages..."
+
+    echo "Step 3: Installing/Updating Python packages..."
     pip install -r requirements.txt
     if [ -f "sub-checker/requirements.txt" ]; then pip install -r "sub-checker/requirements.txt"; fi
+
     echo "$APP_V" > "$APP_VERSION_FILE"
     echo "$CORE_V" > "$CORE_VERSION_FILE"
-    echo "Step 5: Ensuring '$CMD_NAME' command exists..."
+
+    echo "Step 4: Ensuring '$CMD_NAME' command exists..."
     if [ ! -f "$LAUNCHER_PATH" ]; then
         cat << EOF > "$LAUNCHER_PATH"
+#!/bin/bash
 INSTALL_DIR="$HOME/.$CMD_NAME"
 FINAL_TXT_PATH="\$INSTALL_DIR/sub-checker/final.txt"
 if [ -f "\$FINAL_TXT_PATH" ]; then rm "\$FINAL_TXT_PATH"; fi
@@ -77,10 +104,9 @@ python main.py "\$@"
 EOF
         chmod +x "$LAUNCHER_PATH"
     fi
+
     echo -e "${GREEN}Installation/Update complete!${NC}"
     echo "Run the application by typing: ${YELLOW}$CMD_NAME${NC}"
-    echo "Running for the first time after update..."
-    $CMD_NAME
 else
     echo "Standard Linux/macOS environment detected. Installing pre-compiled binary..."
     echo "Step 1: Checking dependencies..."
