@@ -1,4 +1,5 @@
 name: Build and Create Release
+
 on:
   workflow_dispatch:
     inputs:
@@ -14,9 +15,12 @@ on:
         description: 'Description for the release (release notes)'
         required: false
         default: 'Automated release of compiled binaries.'
+
 permissions:
   contents: write
+
 jobs:
+
   build-x86:
     strategy:
       matrix:
@@ -31,8 +35,10 @@ jobs:
             ext: ".exe"
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout main repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Checkout sub-checker python files
         uses: actions/checkout@v4
         with:
@@ -42,11 +48,7 @@ jobs:
             cl.py
             python_v2ray
             requirements.txt
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install Nuitka and all dependencies
+      - name: Install dependencies
         shell: bash
         run: |
           python -m pip install --upgrade pip
@@ -55,7 +57,7 @@ jobs:
           if [ -f sub-checker/requirements.txt ]; then
             pip install -r sub-checker/requirements.txt
           fi
-      - name: Download and Prepare Core Binaries
+      - name: Download Core Binaries
         shell: bash
         run: |
           mkdir -p sub-checker/vendor
@@ -88,20 +90,21 @@ jobs:
         with:
           name: release-asset-${{ matrix.os_path }}
           path: ${{ env.ASSET_NAME }}
+
+  # --- Job for building ARM64 version (for Termux on Android) ---
   build-arm:
     runs-on: ubuntu-latest
+    # این بخش به گیت‌هاب میگه که job رو روی یک کانتینر ARM64 اجرا کن
     container:
       image: ubuntu:latest
       options: --platform linux/arm64
     steps:
-      - name: Install Git & Set up Environment
+      - name: Install git and checkout submodules
         run: |
-          apt-get update -y
+          apt-get update
           apt-get install -y git
-      - name: Checkout main repository
-        uses: actions/checkout@v4
-      - name: Checkout sub-checker python files
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: arshiacomplus/sub-checker
           path: sub-checker
@@ -109,11 +112,11 @@ jobs:
             cl.py
             python_v2ray
             requirements.txt
-      - name: Build for ARM64
+      - name: Build for ARM64 (Termux)
         run: |
-          echo "Installing system dependencies..."
+          echo "Updating packages and installing dependencies..."
           apt-get update -y
-          apt-get install -y python3 python3-pip curl zip unzip patchelf build-essential
+          apt-get install -y python3 python3-pip git curl zip unzip patchelf build-essential
           echo "Installing Python packages..."
           python3 -m pip install --upgrade pip
           pip3 install nuitka
@@ -143,6 +146,7 @@ jobs:
         with:
           name: release-asset-linux-arm64
           path: v2ray_scraper_ui_linux-arm64.zip
+
   release:
     needs: [build-x86, build-arm]
     runs-on: ubuntu-latest
