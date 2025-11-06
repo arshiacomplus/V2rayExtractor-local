@@ -1,60 +1,69 @@
 set -e
 CMD_NAME="v2l"
 REPO="arshiacomplus/V2rayExtractor-local"
+SUB_CHECKER_REPO="arshiacomplus/sub-checker"
 SUB_CH_V="1.1"
 TERMUX_INSTALL_PATH="$HOME/.$CMD_NAME"
+SUB_CHECKER_PATH="$TERMUX_INSTALL_PATH/sub-checker"
 VERSION_FILE="$TERMUX_INSTALL_PATH/.version"
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
-echo -e "${BLUE}--- V2L Installer & Updater ---${NC}"
 if [[ -n "$PREFIX" ]]; then
-    echo "Termux environment detected."
-    if [ -f "$VERSION_FILE" ] && [ "$(cat "$VERSION_FILE")" == "$SUB_CH_V" ]; then
-        echo -e "${GREEN}V2L is already up-to-date (version $SUB_CH_V).${NC}"
-        echo "To run the app, type: ${YELLOW}$CMD_NAME${NC}"
-        exit 0
-    elif [ -d "$TERMUX_INSTALL_PATH" ]; then
-        echo -e "${YELLOW}An old or different version was found. Updating to $SUB_CH_V...${NC}"
-        rm -rf "$TERMUX_INSTALL_PATH"
-    else
-        echo "No previous installation found. Starting fresh install..."
-    fi
-    echo "Step 1: Installing system dependencies..."
-    pkg update -y
-    pkg install -y python git curl unzip patchelf build-essential tur-repo
-    echo "Step 2: Installing pre-built gRPCio for Python..."
-    pkg install -y python-grpcio
-    echo "Step 3: Cloning repositories to $TERMUX_INSTALL_PATH..."
-    git clone https://github.com/$REPO.git "$TERMUX_INSTALL_PATH"
-    cd "$TERMUX_INSTALL_PATH"
-    git clone https://github.com/arshiacomplus/sub-checker.git sub-checker
-    echo "Step 4: Preparing binaries..."
-    mkdir -p sub-checker/vendor
-    mv sub-checker/xray/xray sub-checker/vendor/xray
-    if [ -f "sub-checker/hy2/hysteria" ]; then mv sub-checker/hy2/hysteria sub-checker/vendor/hysteria; fi
-    chmod +x sub-checker/vendor/*
-    rm -rf sub-checker/xray sub-checker/hy2
-    echo "Step 5: Installing Python packages..."
-    pip install -r requirements.txt
-    if [ -f sub-checker/requirements.txt ]; then pip install -r sub-checker/requirements.txt; fi
-    echo "$SUB_CH_V" > "$VERSION_FILE"
     LAUNCHER_PATH="$PREFIX/bin/$CMD_NAME"
-    echo "Step 6: Creating the '$CMD_NAME' command..."
+    if [ -f "$LAUNCHER_PATH" ]; then
+        echo -e "${GREEN}V2L is already installed. Launching...${NC}"
+        echo "To check for updates, re-run the installation command from GitHub."
+        $CMD_NAME
+        exit 0
+    fi
+    echo -e "${BLUE}--- V2L First-Time Setup / Update for Termux ---${NC}"
+    echo "Step 1: Installing base system dependencies..."
+    pkg update -y
+    pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
+    if [ -d "$SUB_CHECKER_PATH" ]; then
+        echo "'sub-checker' directory found."
+        if [ -f "$VERSION_FILE" ] && [ "$(cat "$VERSION_FILE")" == "$SUB_CH_V" ]; then
+            echo -e "${GREEN}sub-checker is already up-to-date (version $SUB_CH_V). Skipping clone.${NC}"
+        else
+            echo -e "${YELLOW}sub-checker is outdated or version is unknown. Updating cl.py...${NC}"
+            curl -L "https://raw.githubusercontent.com/$SUB_CHECKER_REPO/main/cl.py" -o "$SUB_CHECKER_PATH/cl.py"
+            echo "cl.py updated."
+        fi
+    else
+        echo "'sub-checker' directory not found. Cloning fresh repository..."
+        git clone "https://github.com/$SUB_CHECKER_REPO.git" "$SUB_CHECKER_PATH"
+    fi
+    if [ ! -d "$TERMUX_INSTALL_PATH" ]; then
+        git clone "https://github.com/$REPO.git" "$TERMUX_INSTALL_PATH"
+    fi
+    cd "$TERMUX_INSTALL_PATH"
+    echo "Step 2: Preparing binaries..."
+    if [ -d "sub-checker/xray" ] && [ -d "sub-checker/hy2" ]; then
+        mkdir -p sub-checker/vendor
+        mv sub-checker/xray/xray sub-checker/vendor/xray
+        if [ -f "sub-checker/hy2/hysteria" ]; then mv sub-checker/hy2/hysteria sub-checker/vendor/hysteria; fi
+        chmod +x sub-checker/vendor/*
+        rm -rf sub-checker/xray sub-checker/hy2
+    else
+        echo "Binaries seem to be already prepared. Skipping."
+    fi
+    echo "Step 3: Installing Python packages..."
+    pip install -r requirements.txt
+    if [ -f "sub-checker/requirements.txt" ]; then pip install -r "sub-checker/requirements.txt"; fi
+    echo "$SUB_CH_V" > "$VERSION_FILE"
+    echo "Step 4: Creating the '$CMD_NAME' command..."
     cat << EOF > "$LAUNCHER_PATH"
 INSTALL_DIR="$HOME/.$CMD_NAME"
 FINAL_TXT_PATH="\$INSTALL_DIR/sub-checker/final.txt"
-if [ -f "\$FINAL_TXT_PATH" ]; then
-    rm "\$FINAL_TXT_PATH"
-fi
+if [ -f "\$FINAL_TXT_PATH" ]; then rm "\$FINAL_TXT_PATH"; fi
 cd "\$INSTALL_DIR"
 python main.py "\$@"
 EOF
     chmod +x "$LAUNCHER_PATH"
-    echo -e "${GREEN}Installation/Update for Termux complete!${NC}"
-    echo "You can now run the application from anywhere by typing:"
-    echo -e "${YELLOW}  $CMD_NAME${NC}"
+    echo -e "${GREEN}Installation/Update complete!${NC}"
+    echo "Run the application by typing: ${YELLOW}$CMD_NAME${NC}"
     echo "Running for the first time..."
     $CMD_NAME
 else
