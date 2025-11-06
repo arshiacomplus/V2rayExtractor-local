@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag for the new release (e.g., v1.0.1)'
+        description: 'Tag for the new release (e.g., v1.1.0)'
         required: true
         default: 'v1.0.0'
       release_title:
@@ -17,26 +17,24 @@ on:
 permissions:
   contents: write
 jobs:
-  build:
+  build-x86:
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
-            arch: "x64"
             asset_keyword: "linux-64"
             os_path: "linux-x64"
+            ext: ""
           - os: windows-latest
-            arch: "x64"
             asset_keyword: "windows-64"
             os_path: "windows-x64"
-          - os: ubuntu-latest
-            arch: "aarch64"
-            asset_keyword: "linux-arm64-v8a"
-            os_path: "linux-arm64"
+            ext: ".exe"
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout main repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Checkout sub-checker python files
         uses: actions/checkout@v4
         with:
@@ -46,15 +44,7 @@ jobs:
             cl.py
             python_v2ray
             requirements.txt
-      - name: Set up QEMU for ARM build
-        if: matrix.arch == 'aarch64'
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Python for ${{ matrix.arch }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          architecture: ${{ matrix.arch }}
-      - name: Install Nuitka and all dependencies
+      - name: Install dependencies
         shell: bash
         run: |
           python -m pip install --upgrade pip
@@ -63,7 +53,7 @@ jobs:
           if [ -f sub-checker/requirements.txt ]; then
             pip install -r sub-checker/requirements.txt
           fi
-      - name: Download and Prepare Core Binaries
+      - name: Download Core Binaries
         shell: bash
         run: |
           mkdir -p sub-checker/vendor
@@ -75,41 +65,66 @@ jobs:
           rm xray.zip
           chmod +x sub-checker/vendor/* || true
           ls -l sub-checker/vendor
-      - name: Set output file names
+      - name: Set output names
         id: set_names
         shell: bash
         run: |
           OS_PATH=${{ matrix.os_path }}
-          EXE_EXT=$(if [ "${{ runner.os }}" == "Windows" ]; then echo ".exe"; fi)
+          EXE_EXT=${{ matrix.ext }}
           echo "EXE_NAME=v2ray_scraper_ui_${OS_PATH}${EXE_EXT}" >> $GITHUB_ENV
           echo "ASSET_NAME=v2ray_scraper_ui_${OS_PATH}.zip" >> $GITHUB_ENV
       - name: Compile with Nuitka
         shell: bash
         run: |
-          if [ "${{ matrix.arch }}" == "aarch64" ]; then
-            export CFLAGS="-L/usr/aarch64-linux-gnu/lib"
-            export LDFLAGS="-L/usr/aarch64-linux-gnu/lib"
-          fi
-          python -m nuitka main.py \
-            --onefile \
-            --output-dir=dist \
-            --output-filename=${{ env.EXE_NAME }} \
-            --follow-imports \
-            --include-data-dir=app/web=app/web \
-            --include-data-dir=sub-checker=sub-checker \
-            --windows-console-mode=disable \
-            --assume-yes-for-downloads
+          python -m nuitka main.py --onefile --output-dir=dist --output-filename=${{ env.EXE_NAME }} --follow-imports --include-data-dir=app/web=app/web --include-data-dir=sub-checker=sub-checker --windows-console-mode=disable --assume-yes-for-downloads
       - name: Compress executable
         shell: bash
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then 7z a ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}; else zip -j ${{ env.ASSET_NAME }} ./dist/${{ env.EXE_NAME }}; fi
-      - name: Upload Artifact for Release
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-asset-${{ matrix.os_path }}
           path: ${{ env.ASSET_NAME }}
+  build-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: arshiacomplus/sub-checker
+          path: sub-checker
+          sparse-checkout: |
+            cl.py
+            python_v2ray
+            requirements.txt
+      - name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v3
+      - name: Build for ARM64 inside a Docker container
+        run: |
+          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace \
+            --platform linux/arm64 python:3.11-slim /bin/bash -c "
+            apt-get update && apt-get install -y zip curl ca-certificates
+            pip install nuitka
+            pip install -r requirements.txt
+            if [ -f sub-checker/requirements.txt ]; then pip install -r sub-checker/requirements.txt; fi
+            mkdir -p sub-checker/vendor
+            ARM_KEYWORD='linux-arm64-v8a'
+            XRAY_URL=\$(curl -s 'https://api.github.com/repos/XTLS/Xray-core/releases/latest' | grep 'browser_download_url.*'\"\$ARM_KEYWORD\"'.zip' | cut -d '\"' -f 4 | head -n 1)
+            curl -L -o xray.zip \"\$XRAY_URL\"
+            unzip -o xray.zip -d sub-checker/vendor xray geosite.dat geoip.dat
+            rm xray.zip
+            chmod +x sub-checker/vendor/xray
+            python -m nuitka main.py --onefile --output-dir=dist --output-filename=v2ray_scraper_ui_linux-arm64 --follow-imports --include-data-dir=app/web=app/web --include-data-dir=sub-checker=sub-checker --assume-yes-for-downloads
+            zip -j v2ray_scraper_ui_linux-arm64.zip ./dist/v2ray_scraper_ui_linux-arm64
+            "
+      - name: Upload ARM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-asset-linux-arm64
+          path: v2ray_scraper_ui_linux-arm64.zip
   release:
-    needs: build
+    needs: [build-x86, build-arm]
     runs-on: ubuntu-latest
     steps:
       - name: Download all build artifacts
