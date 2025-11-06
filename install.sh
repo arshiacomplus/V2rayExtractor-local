@@ -44,7 +44,7 @@ if [[ -n "$PREFIX" ]]; then
     echo "Termux environment detected. Installing from source..."
     
     echo "Step 1: Installing dependencies (git, python, etc.)..."
-    pkg update -y
+
     pkg install -y python git curl unzip patchelf build-essential
 
     echo "Step 2: Cloning repositories..."
