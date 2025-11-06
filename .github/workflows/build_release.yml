@@ -65,7 +65,7 @@ jobs:
           rm xray.zip
           chmod +x sub-checker/vendor/* || true
           ls -l sub-checker/vendor
-      - name: Set output names
+      - name: Set output file names
         id: set_names
         shell: bash
         run: |
@@ -99,7 +99,7 @@ jobs:
             python_v2ray
             requirements.txt
       - name: Build for Termux (ARM64)
-        uses: termux/termux-docker@v3.1.0
+        uses: termux/termux-docker@v3.0.0
         with:
           run: |
             echo "Updating packages and installing dependencies..."
