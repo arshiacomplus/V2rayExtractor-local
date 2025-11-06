@@ -1,5 +1,4 @@
 set -e
-set -e
 CMD_NAME="v2l"
 REPO="arshiacomplus/V2rayExtractor-local"
 SUB_CHECKER_REPO="arshiacomplus/sub-checker"
@@ -13,11 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 if [[ -n "$PREFIX" ]]; then
     LAUNCHER_PATH="$PREFIX/bin/$CMD_NAME"
-    if [ -f "$LAUNCHER_PATH" ] && \
-       [ -d "$TERMUX_INSTALL_PATH" ] && \
-       [ -d "$SUB_CHECKER_PATH" ] && \
-       [ -f "$VERSION_FILE" ] && \
-       [ "$(cat "$VERSION_FILE")" == "$SUB_CH_V" ]; then
+    if [ -f "$LAUNCHER_PATH" ] && [ -d "$TERMUX_INSTALL_PATH" ] && [ -d "$SUB_CHECKER_PATH" ] && [ -f "$VERSION_FILE" ] && [ "$(cat "$VERSION_FILE")" == "$SUB_CH_V" ]; then
         echo -e "${GREEN}V2L is up-to-date (v$SUB_CH_V). Launching...${NC}"
         $CMD_NAME
         exit 0
@@ -36,8 +31,11 @@ if [[ -n "$PREFIX" ]]; then
     echo "Step 3: Preparing binaries..."
     if [ -d "sub-checker/xray" ]; then
         mkdir -p sub-checker/vendor
-        mv sub-checker/xray/xray sub-checker/vendor/xray
-        if [ -f "sub-checker/hy2/hysteria" ]; then mv sub-checker/hy2/hysteria sub-checker/vendor/hysteria; fi
+        echo "Renaming binaries to 'xray_linux' and 'hysteria_linux'..."
+        mv sub-checker/xray/xray sub-checker/vendor/xray_linux
+        if [ -f "sub-checker/hy2/hysteria" ]; then
+            mv sub-checker/hy2/hysteria sub-checker/vendor/hysteria_linux
+        fi
         chmod +x sub-checker/vendor/*
         rm -rf sub-checker/xray sub-checker/hy2
     fi
@@ -55,8 +53,7 @@ python main.py "\$@"
 EOF
     chmod +x "$LAUNCHER_PATH"
     echo -e "${GREEN}Installation/Update complete!${NC}"
-    echo "You can now run the application from anywhere by typing:"
-    echo -e "${YELLOW}  $CMD_NAME${NC}"
+    echo "Run the application by typing: ${YELLOW}$CMD_NAME${NC}"
     echo "Running for the first time..."
     $CMD_NAME
 else
