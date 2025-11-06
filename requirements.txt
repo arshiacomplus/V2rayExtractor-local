@@ -1,7 +1,8 @@
 fastapi
-uvicorn[standard]
+uvicorn
 beautifulsoup4
 httpx
 pycountry
 requests
+
 python-v2ray
