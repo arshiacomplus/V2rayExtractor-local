@@ -11,36 +11,31 @@ set "REPO=arshiacomplus/V2rayExtractor-local"
 set "CMD_NAME=v2l"
 set "INSTALL_DIR=%APPDATA%\V2L_CLI"
 set "LAUNCHER_PATH=%INSTALL_DIR%\%CMD_NAME%.exe"
-
-set "SUB_CH_V=1.1"
+set "INSTALL_V=1.1"
 set "VERSION_FILE=%INSTALL_DIR%\.version"
 
 :: --- Main Logic ---
 
-:: Check if the executable is installed and the version is correct
 if exist "%LAUNCHER_PATH%" (
     if exist "%VERSION_FILE%" (
         set /p INSTALLED_V=<"%VERSION_FILE%"
-        if "!INSTALLED_V!" == "!SUB_CH_V!" (
-            echo V2L is already up-to-date (version !SUB_CH_V!). Launching...
+        if "!INSTALLED_V!" == "!INSTALL_V!" (
+            echo V2L is already up-to-date (version !INSTALL_V!). Launching...
             start "" "%LAUNCHER_PATH%"
             exit /b 0
         ) else (
-            echo A new version is required. Updating from !INSTALLED_V! to !SUB_CH_V!...
-            echo Deleting old installation for a clean update...
-            :: Clean up the entire old installation directory
+            echo A new version is available. Updating from !INSTALLED_V! to !INSTALL_V!...
+            echo Deleting old installation...
             rmdir /s /q "%INSTALL_DIR%"
         )
     ) else (
-        echo Version file not found. Installation is corrupt. Forcing update...
+        echo Version file not found. Forcing update...
         rmdir /s /q "%INSTALL_DIR%"
     )
 )
 
-:: If not installed or an update is needed, proceed with full installation
 echo --- V2L First-Time Setup / Update for Windows ---
 
-:: --- Download and Extract ---
 echo Fetching latest release from GitHub...
 set "PS_CMD_GET_URL=powershell -NoProfile -ExecutionPolicy Bypass -Command "(Invoke-RestMethod -Uri 'https://api.github.com/repos/%REPO%/releases/latest').assets | Where-Object { $_.name -like '*windows-x64*' } | Select-Object -ExpandProperty browser_download_url""
 for /f "delims=" %%i in ('%PS_CMD_GET_URL%') do set "DOWNLOAD_URL=%%i"
@@ -59,17 +54,14 @@ echo Extracting executable...
 set "EXTRACT_DIR=%TEMP%\v2l-extracted"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%ZIP_FILE%' -DestinationPath '%EXTRACT_DIR%' -Force"
 
-:: --- Installation ---
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 echo Installing to %INSTALL_DIR%...
 for /f "delims=" %%f in ('dir /b /s "%EXTRACT_DIR%\v2ray_scraper_ui*.exe"') do (
     move "%%f" "%LAUNCHER_PATH%"
 )
 
-:: --- Save new version file ---
-echo %SUB_CH_V% > "%VERSION_FILE%"
+echo %INSTALL_V% > "%VERSION_FILE%"
 
-:: --- Add to PATH ---
 echo Adding installation directory to your PATH...
 echo %PATH% | find "%INSTALL_DIR%" >nul
 if errorlevel 1 (
@@ -79,7 +71,6 @@ if errorlevel 1 (
     echo Directory is already in your PATH. No changes needed.
 )
 
-:: --- Cleanup ---
 del "%ZIP_FILE%"
 rmdir /s /q "%EXTRACT_DIR%"
 
@@ -87,11 +78,9 @@ echo.
 echo =================================================================
 echo  Installation/Update Successful!
 echo.
-echo  IMPORTANT: You MUST open a NEW terminal (CMD or PowerShell)
-echo  for the new command to work.
+echo  IMPORTANT: You MUST open a NEW terminal (CMD or PowerShell) for the new command to work.
 echo.
-echo  In the new terminal, you can run the application by typing:
-echo    %CMD_NAME%
+echo  In the new terminal, you can run the application by typing: %CMD_NAME%
 echo =================================================================
 pause
 endlocal
