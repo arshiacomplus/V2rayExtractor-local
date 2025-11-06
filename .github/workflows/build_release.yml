@@ -14,6 +14,8 @@ on:
         description: 'Description for the release (release notes)'
         required: false
         default: 'Automated release of compiled binaries.'
+permissions:
+  contents: write
 jobs:
   build:
     strategy:
