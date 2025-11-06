@@ -31,10 +31,8 @@ jobs:
             ext: ".exe"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Checkout main repository
+        uses: actions/checkout@v4
       - name: Checkout sub-checker python files
         uses: actions/checkout@v4
         with:
@@ -44,7 +42,11 @@ jobs:
             cl.py
             python_v2ray
             requirements.txt
-      - name: Install dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Nuitka and all dependencies
         shell: bash
         run: |
           python -m pip install --upgrade pip
@@ -53,7 +55,7 @@ jobs:
           if [ -f sub-checker/requirements.txt ]; then
             pip install -r sub-checker/requirements.txt
           fi
-      - name: Download Core Binaries
+      - name: Download and Prepare Core Binaries
         shell: bash
         run: |
           mkdir -p sub-checker/vendor
@@ -88,9 +90,18 @@ jobs:
           path: ${{ env.ASSET_NAME }}
   build-arm:
     runs-on: ubuntu-latest
+    container:
+      image: ubuntu:latest
+      options: --platform linux/arm64
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - name: Install Git & Set up Environment
+        run: |
+          apt-get update -y
+          apt-get install -y git
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+      - name: Checkout sub-checker python files
+        uses: actions/checkout@v4
         with:
           repository: arshiacomplus/sub-checker
           path: sub-checker
@@ -98,36 +109,35 @@ jobs:
             cl.py
             python_v2ray
             requirements.txt
-      - name: Build for Termux (ARM64)
-        uses: termux/termux-docker@v3.0.0
-        with:
-          run: |
-            echo "Updating packages and installing dependencies..."
-            pkg update -y
-            pkg install -y python git curl zip unzip patchelf build-essential
-            echo "Installing Python packages..."
-            pip install nuitka
-            pip install -r requirements.txt
-            if [ -f sub-checker/requirements.txt ]; then pip install -r sub-checker/requirements.txt; fi
-            echo "Downloading ARM binaries for Xray..."
-            mkdir -p sub-checker/vendor
-            ARM_KEYWORD='linux-arm64-v8a'
-            XRAY_URL=$(curl -s 'https://api.github.com/repos/XTLS/Xray-core/releases/latest' | grep "browser_download_url.*${ARM_KEYWORD}.zip" | cut -d '"' -f 4 | head -n 1)
-            curl -L -o xray.zip "$XRAY_URL"
-            unzip -o xray.zip -d sub-checker/vendor xray geosite.dat geoip.dat
-            rm xray.zip
-            chmod +x sub-checker/vendor/xray
-            echo "Starting Nuitka compilation for ARM64..."
-            python -m nuitka main.py \
-              --onefile \
-              --output-dir=dist \
-              --output-filename=v2ray_scraper_ui_linux-arm64 \
-              --follow-imports \
-              --include-data-dir=app/web=app/web \
-              --include-data-dir=sub-checker=sub-checker \
-              --assume-yes-for-downloads
-            echo "Compressing the final executable..."
-            zip -j v2ray_scraper_ui_linux-arm64.zip ./dist/v2ray_scraper_ui_linux-arm64
+      - name: Build for ARM64
+        run: |
+          echo "Installing system dependencies..."
+          apt-get update -y
+          apt-get install -y python3 python3-pip curl zip unzip patchelf build-essential
+          echo "Installing Python packages..."
+          python3 -m pip install --upgrade pip
+          pip3 install nuitka
+          pip3 install -r requirements.txt
+          if [ -f sub-checker/requirements.txt ]; then pip3 install -r sub-checker/requirements.txt; fi
+          echo "Downloading ARM binaries for Xray..."
+          mkdir -p sub-checker/vendor
+          ARM_KEYWORD='linux-arm64-v8a'
+          XRAY_URL=$(curl -s 'https://api.github.com/repos/XTLS/Xray-core/releases/latest' | grep "browser_download_url.*${ARM_KEYWORD}.zip" | cut -d '"' -f 4 | head -n 1)
+          curl -L -o xray.zip "$XRAY_URL"
+          unzip -o xray.zip -d sub-checker/vendor xray geosite.dat geoip.dat
+          rm xray.zip
+          chmod +x sub-checker/vendor/xray
+          echo "Starting Nuitka compilation for ARM64..."
+          python3 -m nuitka main.py \
+            --onefile \
+            --output-dir=dist \
+            --output-filename=v2ray_scraper_ui_linux-arm64 \
+            --follow-imports \
+            --include-data-dir=app/web=app/web \
+            --include-data-dir=sub-checker=sub-checker \
+            --assume-yes-for-downloads
+          echo "Compressing the final executable..."
+          zip -j v2ray_scraper_ui_linux-arm64.zip ./dist/v2ray_scraper_ui_linux-arm64
       - name: Upload ARM Artifact
         uses: actions/upload-artifact@v4
         with:
