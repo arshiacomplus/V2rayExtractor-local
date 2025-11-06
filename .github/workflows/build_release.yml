@@ -106,8 +106,8 @@ jobs:
           arch: aarch64
           distro: ubuntu22.04
           setup: |
-            apt-get update -y
-            apt-get install -y python3 python3-pip git curl zip unzip build-essential patchelf
+            sudo apt-get update -y
+            sudo apt-get install -y python3 python3-pip git curl zip unzip build-essential patchelf
           run: |
             echo "Installing Python packages..."
             python3 -m pip install --upgrade pip
