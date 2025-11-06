@@ -130,7 +130,8 @@ jobs:
               --follow-imports \
               --include-data-dir=app/web=app/web \
               --include-data-dir=sub-checker=sub-checker \
-              --assume-yes-for-downloads
+              --assume-yes-for-downloads \
+              --jobs=1
             echo "Compressing the final executable..."
             zip -j v2ray_scraper_ui_linux-arm64.zip ./dist/v2ray_scraper_ui_linux-arm64
       - name: Upload ARM Artifact
