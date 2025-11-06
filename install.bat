@@ -11,14 +11,14 @@ set "REPO=arshiacomplus/V2rayExtractor-local"
 set "CMD_NAME=v2l"
 set "INSTALL_DIR=%APPDATA%\V2L_CLI"
 set "LAUNCHER_PATH=%INSTALL_DIR%\%CMD_NAME%.exe"
+
 set "SUB_CH_V=1.1"
 set "VERSION_FILE=%INSTALL_DIR%\.version"
 
 :: --- Main Logic ---
 
-:: Check if the executable is already installed
+:: Check if the executable is installed and the version is correct
 if exist "%LAUNCHER_PATH%" (
-    :: Check if a version file exists
     if exist "%VERSION_FILE%" (
         set /p INSTALLED_V=<"%VERSION_FILE%"
         if "!INSTALLED_V!" == "!SUB_CH_V!" (
@@ -26,13 +26,13 @@ if exist "%LAUNCHER_PATH%" (
             start "" "%LAUNCHER_PATH%"
             exit /b 0
         ) else (
-            echo A new version is available. Updating from !INSTALLED_V! to !SUB_CH_V!...
-            echo Deleting old installation...
-            :: Clean up the entire old installation directory for a clean update
+            echo A new version is required. Updating from !INSTALLED_V! to !SUB_CH_V!...
+            echo Deleting old installation for a clean update...
+            :: Clean up the entire old installation directory
             rmdir /s /q "%INSTALL_DIR%"
         )
     ) else (
-        echo Version file not found. Forcing update...
+        echo Version file not found. Installation is corrupt. Forcing update...
         rmdir /s /q "%INSTALL_DIR%"
     )
 )
@@ -71,10 +71,9 @@ echo %SUB_CH_V% > "%VERSION_FILE%"
 
 :: --- Add to PATH ---
 echo Adding installation directory to your PATH...
-:: Check if path is already present to avoid duplicates
 echo %PATH% | find "%INSTALL_DIR%" >nul
 if errorlevel 1 (
-    echo Adding new path...
+    echo Adding new path to environment variables...
     setx PATH "%%PATH%%;%INSTALL_DIR%"
 ) else (
     echo Directory is already in your PATH. No changes needed.
