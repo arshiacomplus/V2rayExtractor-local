@@ -46,7 +46,11 @@ if [[ -n "$PREFIX" ]]; then
     echo "Step 1: Installing dependencies (git, python, etc.)..."
 
     pkg install -y python git curl unzip patchelf build-essential
-
+    
+    echo "Step 1-2: Installing pre-built gRPCio for Python..."
+    # This is the key to avoid compilation errors
+    pkg install -y python-grpcio
+    
     echo "Step 2: Cloning repositories..."
     # Remove old installation if it exists
     rm -rf "$TERMUX_INSTALL_PATH"
