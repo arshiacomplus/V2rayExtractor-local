@@ -104,7 +104,7 @@ jobs:
         run: |
           docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace \
             --platform linux/arm64 python:3.11-slim /bin/bash -c "
-            apt-get update && apt-get install -y zip curl ca-certificates patchelf
+            apt-get update && apt-get install -y zip curl ca-certificates patchelf build-essential
             pip install nuitka
             pip install -r requirements.txt
             if [ -f sub-checker/requirements.txt ]; then pip install -r sub-checker/requirements.txt; fi
