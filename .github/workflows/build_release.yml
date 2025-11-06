@@ -22,13 +22,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            os_path: "linux"
-            ext: ""
+            arch: "x86_64"
             asset_keyword: "linux-64"
+            os_path: "linux-x64"
           - os: windows-latest
-            os_path: "windows"
-            ext: ".exe"
+            arch: "x86_64"
             asset_keyword: "windows-64"
+            os_path: "windows-x64"
+          - os: ubuntu-latest
+            arch: "aarch64"
+            asset_keyword: "linux-arm64-v8a"
+            os_path: "linux-arm64"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout main repository
@@ -42,10 +46,14 @@ jobs:
             cl.py
             python_v2ray
             requirements.txt
+      - name: Set up QEMU for ARM build
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-qemu-action@v3
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          architecture: ${{ matrix.arch }}
       - name: Install Nuitka and all dependencies
         shell: bash
         run: |
@@ -58,7 +66,6 @@ jobs:
       - name: Download and Prepare Core Binaries
         shell: bash
         run: |
-          echo "Preparing 'sub-checker/vendor' directory..."
           mkdir -p sub-checker/vendor
           echo "Fetching latest Xray-core URL for ${{ matrix.asset_keyword }}..."
           XRAY_URL=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep "browser_download_url.*${{ matrix.asset_keyword }}.zip" | cut -d '"' -f 4 | head -n 1)
@@ -73,12 +80,16 @@ jobs:
         shell: bash
         run: |
           OS_PATH=${{ matrix.os_path }}
-          EXE_EXT=${{ matrix.ext }}
+          EXE_EXT=$(if [ "${{ runner.os }}" == "Windows" ]; then echo ".exe"; fi)
           echo "EXE_NAME=v2ray_scraper_ui_${OS_PATH}${EXE_EXT}" >> $GITHUB_ENV
           echo "ASSET_NAME=v2ray_scraper_ui_${OS_PATH}.zip" >> $GITHUB_ENV
       - name: Compile with Nuitka
         shell: bash
         run: |
+          if [ "${{ matrix.arch }}" == "aarch64" ]; then
+            export CFLAGS="-L/usr/aarch64-linux-gnu/lib"
+            export LDFLAGS="-L/usr/aarch64-linux-gnu/lib"
+          fi
           python -m nuitka main.py \
             --onefile \
             --output-dir=dist \
