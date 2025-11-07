@@ -69,7 +69,7 @@ jobs:
       - name: Compile with Nuitka
         shell: bash
         run: |
-          python -m nuitka main.py --onefile --output-dir=dist --output-filename=${{ env.EXE_NAME }} --follow-imports --include-data-dir=app/web=app/web --include-data-dir=sub-checker=sub-checker --windows-console-mode=disable --assume-yes-for-downloads
+          python -m nuitka main.py --onefile --output-dir=dist --output-filename=${{ env.EXE_NAME }} --follow-imports --include-data-dir=app/web=app/web --include-data-dir=sub-checker=sub-checker  --assume-yes-for-downloads
       - name: Compress executable
         shell: bash
         run: |
