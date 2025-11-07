@@ -5,12 +5,15 @@ on:
       tag_name:
         description: 'Tag for the new release (e.g., v1.1.0)'
         required: true
+        default: 'v1.0.0'
       release_title:
         description: 'Title of the release'
         required: true
+        default: 'New Release'
       release_body:
-        description: 'Description for the release'
+        description: 'Description for the release (release notes)'
         required: false
+        default: 'Automated release of compiled binaries.'
 permissions:
   contents: write
 jobs:
@@ -32,32 +35,35 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Checkout sub-checker python files
+      - name: Checkout sub-checker repository
         uses: actions/checkout@v4
         with:
           repository: arshiacomplus/sub-checker
           path: sub-checker
-          sparse-checkout: |
-            cl.py
-            python_v2ray
-            requirements.txt
+
+      - name: Rename sub-checker for Python import compatibility
+        shell: bash
+        run: mv sub-checker sub_checker
+
       - name: Install dependencies
         shell: bash
         run: |
           python -m pip install --upgrade pip
           pip install nuitka
           pip install -r requirements.txt
-          if [ -f sub-checker/requirements.txt ]; then pip install -r sub-checker/requirements.txt; fi
+          if [ -f sub_checker/requirements.txt ]; then
+            pip install -r sub_checker/requirements.txt
+          fi
       - name: Download Core Binaries
         shell: bash
         run: |
-          mkdir -p sub-checker/vendor
+          mkdir -p sub_checker/vendor
           XRAY_URL=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep "browser_download_url.*${{ matrix.asset_keyword }}.zip" | cut -d '"' -f 4 | head -n 1)
           if [ -z "$XRAY_URL" ]; then echo "::error::Could not find Xray-core URL." && exit 1; fi
           curl -L -o xray.zip "$XRAY_URL"
-          if [ "${{ runner.os }}" == "Windows" ]; then 7z x xray.zip -o"sub-checker/vendor" xray.exe geosite.dat geoip.dat; else unzip -o xray.zip -d sub-checker/vendor xray geosite.dat geoip.dat; fi
+          if [ "${{ runner.os }}" == "Windows" ]; then 7z x xray.zip -o"sub_checker/vendor" xray.exe geosite.dat geoip.dat; else unzip -o xray.zip -d sub_checker/vendor xray geosite.dat geoip.dat; fi
           rm xray.zip
-          chmod +x sub-checker/vendor/* || true
+          chmod +x sub_checker/vendor/* || true
       - name: Set output file names
         id: set_names
         shell: bash
@@ -66,11 +72,21 @@ jobs:
           EXE_EXT=${{ matrix.ext }}
           echo "EXE_NAME=v2ray_scraper_ui_${OS_PATH}${EXE_EXT}" >> $GITHUB_ENV
           echo "ASSET_NAME=v2ray_scraper_ui_${OS_PATH}.zip" >> $GITHUB_ENV
+
       - name: Compile with Nuitka
         shell: bash
         run: |
-          export PYTHONPATH=$PYTHONPATH:./sub-checker
-          python -m nuitka main.py --onefile --output-dir=dist --output-filename=${{ env.EXE_NAME }} --follow-imports   --include-data-dir=app/web=app/web --include-data-dir=sub_checker=sub_checker --assume-yes-for-downloads --include-module=jinja2
+
+          python -m nuitka main.py \
+            --onefile \
+            --output-dir=dist \
+            --output-filename=${{ env.EXE_NAME }} \
+            --follow-imports \
+            --include-data-dir=app/web=app/web \
+            --include-data-dir=sub_checker=sub_checker \
+            --assume-yes-for-downloads \
+            --include-module=jinja2
+
       - name: Compress executable
         shell: bash
         run: |
