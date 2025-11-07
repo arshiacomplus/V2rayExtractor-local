@@ -86,6 +86,11 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.We
 v2l
 ```
 
+برای حذف کردنش:
+```batch
+$InstallDir = "$env:APPDATA\V2L_CLI"; if (Test-Path $InstallDir) { Write-Host "Uninstalling V2L..."; Write-Host "1. Removing from user PATH..."; $userPath = (Get-ItemProperty -Path 'HKCU:\Environment' -Name 'Path').Path; $newPath = ($userPath -split ';' | Where-Object { $_ -ne $InstallDir -and $_ -ne "" }) -join ';'; Set-ItemProperty -Path 'HKCU:\Environment' -Name 'Path' -Value $newPath; Write-Host "2. Deleting installation directory: $InstallDir"; Remove-Item -Path $InstallDir -Recurse -Force; Write-Host "Uninstallation complete! Please open a new terminal for changes to take effect." } else { Write-Host "V2L is not installed. Nothing to do." }
+```
+
 این دستور:
 
 یک سرور وب محلی را اجرا می‌کند.
