@@ -1,5 +1,5 @@
 #!/bin/bash
-# V2L - Final Bulletproof Installer, Updater & Launcher v2.0
+# V2L - Final Smart Installer with Rename Strategy
 # Created by arshiacomplus
 
 set -e
@@ -11,15 +11,10 @@ SUB_CHECKER_REPO="arshiacomplus/sub-checker"
 APP_V="1.0.0"
 CORE_V="1.1"
 
-# --- Core Binary Versions ---
-XRAY_REPO="GFW-knocker/Xray-core"
-XRAY_TAG="v1.25.8-mahsa-r1"
-HYSTERIA_REPO="apernet/hysteria"
-HYSTERIA_TAG_URL_ENCODED="app%2Fv2.6.5"
-
 # --- Paths & Colors ---
 INSTALL_PATH="$HOME/.$CMD_NAME"
-SUB_CHECKER_PATH="$INSTALL_PATH/sub-checker"
+SUB_CHECKER_ORIGINAL_PATH="$INSTALL_PATH/sub-checker"
+SUB_CHECKER_RENAMED_PATH="$INSTALL_PATH/sub_checker"
 APP_VERSION_FILE="$INSTALL_PATH/.app_version"
 CORE_VERSION_FILE="$INSTALL_PATH/.core_version"
 GREEN='\033[0;32m'
@@ -31,9 +26,9 @@ NC='\033[0m'
 if [[ -n "$PREFIX" ]]; then
     LAUNCHER_PATH="$PREFIX/bin/$CMD_NAME"
 
-    if [ -f "$LAUNCHER_PATH" ] && [ -d "$INSTALL_PATH" ] && [ -d "$SUB_CHECKER_PATH" ] && \
-       [ -f "$APP_VERSION_FILE" ] && [ "$(cat "$APP_VERSION_FILE")" == "$APP_V" ] && \
-       [ -f "$CORE_VERSION_FILE" ] && [ "$(cat "$CORE_VERSION_FILE")" == "$CORE_V" ]; then
+    if [ -f "$LAUNCHER_PATH" ] && [ -d "$INSTALL_PATH" ] && [ -d "$SUB_CHECKER_RENAMED_PATH" ] && \
+      [ -f "$APP_VERSION_FILE" ] && [ "$(cat "$APP_VERSION_FILE")" == "$APP_V" ] && \
+      [ -f "$CORE_VERSION_FILE" ] && [ "$(cat "$CORE_VERSION_FILE")" == "$CORE_V" ]; then
 
         echo -e "${GREEN}V2L is up-to-date (App: v$APP_V, Core: v$CORE_V). Launching...${NC}"
         $CMD_NAME
@@ -54,42 +49,44 @@ if [[ -n "$PREFIX" ]]; then
     git clone https://github.com/$REPO.git "$INSTALL_PATH"
     cd "$INSTALL_PATH"
 
-    echo "Cloning required files from sub-checker..."
-    git clone --depth 1 --no-checkout "https://github.com/$SUB_CHECKER_REPO.git" sub-checker
-    cd sub-checker
-    git sparse-checkout set cl.py python_v2ray requirements.txt
-    git checkout
-    cd ..
+    echo "Cloning sub-checker..."
+    git clone https://github.com/$SUB_CHECKER_REPO.git "$SUB_CHECKER_ORIGINAL_PATH"
+
+    echo "Renaming 'sub-checker' to 'sub_checker' for Python import..."
+    mv "$SUB_CHECKER_ORIGINAL_PATH" "$SUB_CHECKER_RENAMED_PATH"
 
     echo "Step 2: Preparing core binaries..."
-    mkdir -p "$SUB_CHECKER_PATH/vendor"
+    mkdir -p "$SUB_CHECKER_RENAMED_PATH/vendor"
 
+    XRAY_REPO="GFW-knocker/Xray-core"
+    XRAY_TAG="v1.25.8-mahsa-r1"
+    HYSTERIA_REPO="apernet/hysteria"
+    HYSTERIA_TAG_URL_ENCODED="app%2Fv2.6.5"
     XRAY_ASSET="Xray-linux-arm64-v8a.zip"
     HYSTERIA_ASSET="hysteria-linux-arm64"
 
     echo "Downloading Xray ($XRAY_TAG)..."
     XRAY_URL="https://github.com/$XRAY_REPO/releases/download/$XRAY_TAG/$XRAY_ASSET"
     curl -# -L -o xray.zip "$XRAY_URL"
-    unzip -j xray.zip "xray" -d "$SUB_CHECKER_PATH/vendor"
+    unzip -j xray.zip "xray" -d "$SUB_CHECKER_RENAMED_PATH/vendor"
     rm xray.zip
 
     echo "Downloading Hysteria (v2.6.5)..."
     HYSTERIA_URL="https://github.com/$HYSTERIA_REPO/releases/download/$HYSTERIA_TAG_URL_ENCODED/$HYSTERIA_ASSET"
-    curl -# -L -o "$SUB_CHECKER_PATH/vendor/hysteria" "$HYSTERIA_URL"
+    curl -# -L -o "$SUB_CHECKER_RENAMED_PATH/vendor/hysteria" "$HYSTERIA_URL"
 
     echo "Creating symbolic links to satisfy the library..."
-    cd "$SUB_CHECKER_PATH/vendor"
+    cd "$SUB_CHECKER_RENAMED_PATH/vendor"
     ln -sf xray xray_linux
     ln -sf hysteria hysteria_linux
     cd ../..
 
-    chmod +x sub-checker/vendor/*
-    echo "Binaries and symlinks are ready:"
-    ls -l sub-checker/vendor
+    chmod +x "$SUB_CHECKER_RENAMED_PATH/vendor/*"
+    echo "Binaries and symlinks are ready."
 
     echo "Step 3: Installing Python packages..."
     pip install -r requirements.txt
-    if [ -f "sub-checker/requirements.txt" ]; then pip install -r "sub-checker/requirements.txt"; fi
+    if [ -f "$SUB_CHECKER_RENAMED_PATH/requirements.txt" ]; then pip install -r "$SUB_CHECKER_RENAMED_PATH/requirements.txt"; fi
 
     echo "$APP_V" > "$APP_VERSION_FILE"
     echo "$CORE_V" > "$CORE_VERSION_FILE"
@@ -98,7 +95,7 @@ if [[ -n "$PREFIX" ]]; then
     cat << EOF > "$LAUNCHER_PATH"
 #!/bin/bash
 INSTALL_DIR="$HOME/.$CMD_NAME"
-FINAL_TXT_PATH="\$INSTALL_DIR/sub-checker/final.txt"
+FINAL_TXT_PATH="\$INSTALL_DIR/sub_checker/final.txt"
 if [ -f "\$FINAL_TXT_PATH" ]; then rm "\$FINAL_TXT_PATH"; fi
 cd "\$INSTALL_DIR"
 python main.py "\$@"
