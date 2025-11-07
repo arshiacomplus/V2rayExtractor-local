@@ -1,111 +1,70 @@
-#!/bin/bash
-# V2L - Final Smart Installer with Rename Strategy
-# Created by arshiacomplus
-
 set -e
-
-# --- Configuration ---
 CMD_NAME="v2l"
 REPO="arshiacomplus/V2rayExtractor-local"
 SUB_CHECKER_REPO="arshiacomplus/sub-checker"
 APP_V="1.0.0"
 CORE_V="1.1"
-
-# --- Paths & Colors ---
+XRAY_REPO="GFW-knocker/Xray-core"
+XRAY_TAG="v1.25.8-mahsa-r1"
+HYSTERIA_REPO="apernet/hysteria"
+HYSTERIA_TAG_URL_ENCODED="app%2Fv2.6.5"
 INSTALL_PATH="$HOME/.$CMD_NAME"
-SUB_CHECKER_ORIGINAL_PATH="$INSTALL_PATH/sub-checker"
 SUB_CHECKER_RENAMED_PATH="$INSTALL_PATH/sub_checker"
 APP_VERSION_FILE="$INSTALL_PATH/.app_version"
 CORE_VERSION_FILE="$INSTALL_PATH/.core_version"
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-# --- Main Logic for Termux ---
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 if [[ -n "$PREFIX" ]]; then
     LAUNCHER_PATH="$PREFIX/bin/$CMD_NAME"
-
     if [ -f "$LAUNCHER_PATH" ] && [ -d "$INSTALL_PATH" ] && [ -d "$SUB_CHECKER_RENAMED_PATH" ] && \
-      [ -f "$APP_VERSION_FILE" ] && [ "$(cat "$APP_VERSION_FILE")" == "$APP_V" ] && \
-      [ -f "$CORE_VERSION_FILE" ] && [ "$(cat "$CORE_VERSION_FILE")" == "$CORE_V" ]; then
-
-        echo -e "${GREEN}V2L is up-to-date (App: v$APP_V, Core: v$CORE_V). Launching...${NC}"
-        $CMD_NAME
-        exit 0
+       [ -f "$APP_VERSION_FILE" ] && [ "$(cat "$APP_VERSION_FILE")" == "$APP_V" ] && \
+       [ -f "$CORE_VERSION_FILE" ] && [ "$(cat "$CORE_VERSION_FILE")" == "$CORE_V" ]; then
+        echo -e "${GREEN}V2L is up-to-date. Launching...${NC}"
+        $CMD_NAME; exit 0
     fi
-
     echo -e "${BLUE}--- V2L Setup / Update Required ---${NC}"
-
-    echo "Step 1: Ensuring system dependencies are installed..."
-    pkg update -y
-    pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
-
-    echo "Performing a clean installation..."
-    rm -rf "$INSTALL_PATH"
-    rm -f "$LAUNCHER_PATH"
-
-    echo "Cloning main application..."
-    git clone https://github.com/$REPO.git "$INSTALL_PATH"
+    echo "Step 1: Installing system dependencies..."
+    pkg update -y; pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
+    echo "Step 2: Performing a clean installation..."
+    rm -rf "$INSTALL_PATH"; rm -f "$LAUNCHER_PATH"
+    echo "Cloning main application..."; git clone https://github.com/$REPO.git "$INSTALL_PATH"
     cd "$INSTALL_PATH"
-
-    echo "Cloning sub-checker..."
-    git clone https://github.com/$SUB_CHECKER_REPO.git "$SUB_CHECKER_ORIGINAL_PATH"
-
+    echo "Cloning sub-checker (full repository)..."
+    git clone https://github.com/$SUB_CHECKER_REPO.git sub-checker
     echo "Renaming 'sub-checker' to 'sub_checker' for Python import..."
-    mv "$SUB_CHECKER_ORIGINAL_PATH" "$SUB_CHECKER_RENAMED_PATH"
-
-    echo "Step 2: Preparing core binaries..."
-    mkdir -p "$SUB_CHECKER_RENAMED_PATH/vendor"
-
-    XRAY_REPO="GFW-knocker/Xray-core"
-    XRAY_TAG="v1.25.8-mahsa-r1"
-    HYSTERIA_REPO="apernet/hysteria"
-    HYSTERIA_TAG_URL_ENCODED="app%2Fv2.6.5"
+    mv sub-checker sub_checker
+    echo "Step 3: Preparing core binaries..."
+    VENDOR_DIR="$SUB_CHECKER_RENAMED_PATH/vendor"
+    mkdir -p "$VENDOR_DIR"
     XRAY_ASSET="Xray-linux-arm64-v8a.zip"
     HYSTERIA_ASSET="hysteria-linux-arm64"
-
     echo "Downloading Xray ($XRAY_TAG)..."
     XRAY_URL="https://github.com/$XRAY_REPO/releases/download/$XRAY_TAG/$XRAY_ASSET"
-    curl -# -L -o xray.zip "$XRAY_URL"
-    unzip -j xray.zip "xray" -d "$SUB_CHECKER_RENAMED_PATH/vendor"
+    curl -
+    unzip -j xray.zip "xray" -d "$VENDOR_DIR"
     rm xray.zip
-
     echo "Downloading Hysteria (v2.6.5)..."
     HYSTERIA_URL="https://github.com/$HYSTERIA_REPO/releases/download/$HYSTERIA_TAG_URL_ENCODED/$HYSTERIA_ASSET"
-    curl -# -L -o "$SUB_CHECKER_RENAMED_PATH/vendor/hysteria" "$HYSTERIA_URL"
-
-    echo "Creating symbolic links to satisfy the library..."
-    cd "$SUB_CHECKER_RENAMED_PATH/vendor"
-    ln -sf xray xray_linux
-    ln -sf hysteria hysteria_linux
-    cd ../..
-
-    chmod +x "$SUB_CHECKER_RENAMED_PATH/vendor/*"
-    echo "Binaries and symlinks are ready."
-
-    echo "Step 3: Installing Python packages..."
+    curl -
+    echo "Creating symbolic links and setting permissions..."
+    ln -sf "$VENDOR_DIR/xray" "$VENDOR_DIR/xray_linux"
+    ln -sf "$VENDOR_DIR/hysteria" "$VENDOR_DIR/hysteria_linux"
+    chmod +x "$VENDOR_DIR"/*
+    echo "Binaries and symlinks are ready:"
+    ls -l "$VENDOR_DIR"
+    echo "Step 4: Installing Python packages..."
     pip install -r requirements.txt
     if [ -f "$SUB_CHECKER_RENAMED_PATH/requirements.txt" ]; then pip install -r "$SUB_CHECKER_RENAMED_PATH/requirements.txt"; fi
-
-    echo "$APP_V" > "$APP_VERSION_FILE"
-    echo "$CORE_V" > "$CORE_VERSION_FILE"
-
-    echo "Step 4: Creating the '$CMD_NAME' command..."
+    echo "$APP_V" > "$APP_VERSION_FILE"; echo "$CORE_V" > "$CORE_VERSION_FILE"
+    echo "Step 5: Creating the '$CMD_NAME' command..."
     cat << EOF > "$LAUNCHER_PATH"
-#!/bin/bash
 INSTALL_DIR="$HOME/.$CMD_NAME"
 FINAL_TXT_PATH="\$INSTALL_DIR/sub_checker/final.txt"
 if [ -f "\$FINAL_TXT_PATH" ]; then rm "\$FINAL_TXT_PATH"; fi
-cd "\$INSTALL_DIR"
-python main.py "\$@"
+cd "\$INSTALL_DIR"; python main.py "\$@"
 EOF
     chmod +x "$LAUNCHER_PATH"
-
-    echo -e "${GREEN}Installation/Update complete!${NC}"
-    echo -e "Run the application by typing: ${YELLOW}$CMD_NAME${NC}"
-    echo "Running for the first time..."
-    $CMD_NAME
+    echo -e "${GREEN}Installation complete!${NC}"; echo -e "Run with: ${YELLOW}$CMD_NAME${NC}"
+    echo "Running for the first time..."; $CMD_NAME
 else
     echo "Standard Linux/macOS environment detected. Installing pre-compiled binary..."
     echo "Step 1: Checking dependencies..."
