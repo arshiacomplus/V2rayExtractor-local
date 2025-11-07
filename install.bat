@@ -46,8 +46,17 @@ if exist "%LAUNCHER_PATH%" (
 echo --- V2L First-Time Setup / Update for Windows ---
 
 echo Fetching latest release from GitHub...
-set "PS_CMD_GET_URL=powershell -NoProfile -ExecutionPolicy Bypass -Command "(Invoke-RestMethod -Uri 'https://api.github.com/repos/%REPO%/releases/latest').assets | Where-Object { $_.name -like '*windows-x64*' } | Select-Object -ExpandProperty browser_download_url""
-for /f "delims=" %%i in ('%PS_CMD_GET_URL%') do set "DOWNLOAD_URL=%%i"
+set "URL_FILE=%TEMP%\v2l_download_url.txt"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$url = (Invoke-RestMethod -Uri 'https://api.github.com/repos/%REPO%/releases/latest').assets | Where-Object { $_.name -like '*windows-x64*' } | Select-Object -ExpandProperty browser_download_url; Set-Content -Path '%URL_FILE%' -Value $url"
+
+if not exist "%URL_FILE%" (
+    echo Error: Could not retrieve download URL.
+    pause
+    exit /b 1
+)
+
+set /p DOWNLOAD_URL=<%URL_FILE%
+del "%URL_FILE%"
 
 if not defined DOWNLOAD_URL (
     echo Error: Could not find a release asset for Windows.
