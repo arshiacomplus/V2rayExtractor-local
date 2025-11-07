@@ -69,7 +69,8 @@ jobs:
       - name: Compile with Nuitka
         shell: bash
         run: |
-          python -m nuitka main.py --onefile --output-dir=dist --output-filename=${{ env.EXE_NAME }} --follow-imports --include-data-dir=app/web=app/web --module-path=sub-checker  --assume-yes-for-downloads --include-module=jinja2
+          export PYTHONPATH=$PYTHONPATH:./sub-checker
+          python -m nuitka main.py --onefile --output-dir=dist --output-filename=${{ env.EXE_NAME }} --follow-imports --include-data-dir=app/web=app/web --include-data-dir=sub-checker=sub-checker  --assume-yes-for-downloads --include-module=jinja2
       - name: Compress executable
         shell: bash
         run: |
