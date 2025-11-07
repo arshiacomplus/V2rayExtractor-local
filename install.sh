@@ -1,5 +1,5 @@
 #!/bin/bash
-# V2L - Final Smart Installer with Direct Core Downloads
+# V2L - Final Bulletproof Installer, Updater & Launcher v2.0
 # Created by arshiacomplus
 
 set -e
@@ -46,25 +46,20 @@ if [[ -n "$PREFIX" ]]; then
     pkg update -y
     pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
 
-    if [ ! -f "$CORE_VERSION_FILE" ] || [ "$(cat "$CORE_VERSION_FILE")" != "$CORE_V" ]; then
-        echo -e "${YELLOW}Core components are outdated or missing. Performing a full clean installation...${NC}"
-        rm -rf "$INSTALL_PATH"
-    fi
+    echo "Performing a clean installation..."
+    rm -rf "$INSTALL_PATH"
+    rm -f "$LAUNCHER_PATH"
 
-    if [ ! -d "$INSTALL_PATH" ]; then
-        echo "Cloning main application..."
-        git clone https://github.com/$REPO.git "$INSTALL_PATH"
-    else
-        echo -e "${GREEN}Main application found. Pulling latest updates...${NC}"
-        cd "$INSTALL_PATH" && git pull origin main
-    fi
+    echo "Cloning main application..."
+    git clone https://github.com/$REPO.git "$INSTALL_PATH"
     cd "$INSTALL_PATH"
 
-    if [ ! -d "$SUB_CHECKER_PATH" ]; then
-        echo "Cloning required files from sub-checker..."
-        git clone --depth 1 --no-checkout "https://github.com/$SUB_CHECKER_REPO.git" sub-checker
-        (cd sub-checker && git sparse-checkout set cl.py python_v2ray requirements.txt && git checkout)
-    fi
+    echo "Cloning required files from sub-checker..."
+    git clone --depth 1 --no-checkout "https://github.com/$SUB_CHECKER_REPO.git" sub-checker
+    cd sub-checker
+    git sparse-checkout set cl.py python_v2ray requirements.txt
+    git checkout
+    cd ..
 
     echo "Step 2: Preparing core binaries..."
     mkdir -p "$SUB_CHECKER_PATH/vendor"
@@ -92,16 +87,15 @@ if [[ -n "$PREFIX" ]]; then
     echo "Binaries and symlinks are ready:"
     ls -l sub-checker/vendor
 
-    echo "Step 3: Installing/Updating Python packages..."
+    echo "Step 3: Installing Python packages..."
     pip install -r requirements.txt
     if [ -f "sub-checker/requirements.txt" ]; then pip install -r "sub-checker/requirements.txt"; fi
 
     echo "$APP_V" > "$APP_VERSION_FILE"
     echo "$CORE_V" > "$CORE_VERSION_FILE"
 
-    echo "Step 4: Ensuring '$CMD_NAME' command exists..."
-    if [ ! -f "$LAUNCHER_PATH" ]; then
-        cat << EOF > "$LAUNCHER_PATH"
+    echo "Step 4: Creating the '$CMD_NAME' command..."
+    cat << EOF > "$LAUNCHER_PATH"
 #!/bin/bash
 INSTALL_DIR="$HOME/.$CMD_NAME"
 FINAL_TXT_PATH="\$INSTALL_DIR/sub-checker/final.txt"
@@ -109,8 +103,7 @@ if [ -f "\$FINAL_TXT_PATH" ]; then rm "\$FINAL_TXT_PATH"; fi
 cd "\$INSTALL_DIR"
 python main.py "\$@"
 EOF
-        chmod +x "$LAUNCHER_PATH"
-    fi
+    chmod +x "$LAUNCHER_PATH"
 
     echo -e "${GREEN}Installation/Update complete!${NC}"
     echo -e "Run the application by typing: ${YELLOW}$CMD_NAME${NC}"
