@@ -70,7 +70,7 @@ jobs:
         shell: bash
         run: |
           export PYTHONPATH=$PYTHONPATH:./sub-checker
-          python -m nuitka main.py --onefile --output-dir=dist --output-filename=${{ env.EXE_NAME }} --follow-imports --follow-import-to=sub_checker  --include-data-dir=app/web=app/web --include-data-dir=sub-checker=sub-checker  --assume-yes-for-downloads --include-module=jinja2
+          python -m nuitka main.py --onefile --output-dir=dist --output-filename=${{ env.EXE_NAME }} --follow-imports --include-data-dir=sub_checker=sub_checker  --include-data-dir=app/web=app/web --include-data-dir=sub-checker=sub-checker  --assume-yes-for-downloads --include-module=jinja2
       - name: Compress executable
         shell: bash
         run: |
