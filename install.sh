@@ -1,5 +1,5 @@
 #!/bin/bash
-# V2L - Final Bulletproof Installer with Symlink Fix v1.9
+# V2L - Final Smart Installer with Direct Core Downloads
 # Created by arshiacomplus
 
 set -e
@@ -10,6 +10,13 @@ REPO="arshiacomplus/V2rayExtractor-local"
 SUB_CHECKER_REPO="arshiacomplus/sub-checker"
 APP_V="1.0.0"
 CORE_V="1.1"
+
+# --- Core Binary Versions ---
+XRAY_REPO="GFW-knocker/Xray-core"
+XRAY_TAG="v1.25.8-mahsa-r1"
+HYSTERIA_REPO="apernet/hysteria"
+HYSTERIA_TAG_URL_ENCODED="app%2Fv2.6.5"
+
 # --- Paths & Colors ---
 INSTALL_PATH="$HOME/.$CMD_NAME"
 SUB_CHECKER_PATH="$INSTALL_PATH/sub-checker"
@@ -39,7 +46,6 @@ if [[ -n "$PREFIX" ]]; then
     pkg update -y
     pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
 
-    # --- Smart Update Logic ---
     if [ ! -f "$CORE_VERSION_FILE" ] || [ "$(cat "$CORE_VERSION_FILE")" != "$CORE_V" ]; then
         echo -e "${YELLOW}Core components are outdated or missing. Performing a full clean installation...${NC}"
         rm -rf "$INSTALL_PATH"
@@ -57,35 +63,30 @@ if [[ -n "$PREFIX" ]]; then
     if [ ! -d "$SUB_CHECKER_PATH" ]; then
         echo "Cloning required files from sub-checker..."
         git clone --depth 1 --no-checkout "https://github.com/$SUB_CHECKER_REPO.git" sub-checker
-        (cd sub-checker && git sparse-checkout set cl.py python_v2ray requirements.txt hy2 xray && git checkout)
+        (cd sub-checker && git sparse-checkout set cl.py python_v2ray requirements.txt && git checkout)
     fi
 
     echo "Step 2: Preparing core binaries..."
     mkdir -p "$SUB_CHECKER_PATH/vendor"
 
-    XRAY_REPO="GFW-knocker/Xray-core"
-    XRAY_TAG="v1.25.8-mahsa-r1"
     XRAY_ASSET="Xray-linux-arm64-v8a.zip"
+    HYSTERIA_ASSET="hysteria-linux-arm64"
 
-    echo "Downloading Xray binary ($XRAY_TAG)..."
+    echo "Downloading Xray ($XRAY_TAG)..."
     XRAY_URL="https://github.com/$XRAY_REPO/releases/download/$XRAY_TAG/$XRAY_ASSET"
-    curl -L -o xray.zip "$XRAY_URL"
-    unzip -j xray.zip "xray" -d "sub-checker/vendor"
+    curl -# -L -o xray.zip "$XRAY_URL"
+    unzip -j xray.zip "xray" -d "$SUB_CHECKER_PATH/vendor"
     rm xray.zip
 
+    echo "Downloading Hysteria (v2.6.5)..."
+    HYSTERIA_URL="https://github.com/$HYSTERIA_REPO/releases/download/$HYSTERIA_TAG_URL_ENCODED/$HYSTERIA_ASSET"
+    curl -# -L -o "$SUB_CHECKER_PATH/vendor/hysteria" "$HYSTERIA_URL"
+
     echo "Creating symbolic links to satisfy the library..."
-    cd sub-checker/vendor
+    cd "$SUB_CHECKER_PATH/vendor"
     ln -sf xray xray_linux
-
-    if [ -f "../../sub-checker/hy2/hysteria" ]; then
-        cp ../../sub-checker/hy2/hysteria .
-        ln -sf hysteria hysteria_linux
-    else
-        echo -e "${YELLOW}Warning: Hysteria binary not found in sub-checker repo. Hysteria configs might not be tested.${NC}"
-    fi
-
+    ln -sf hysteria hysteria_linux
     cd ../..
-    # ---------------------------------------------
 
     chmod +x sub-checker/vendor/*
     echo "Binaries and symlinks are ready:"
