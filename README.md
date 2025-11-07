@@ -73,7 +73,7 @@ bash -c "$(curl -sL https://raw.githubusercontent.com/arshiacomplus/V2rayExtract
 
 ترمینال PowerShell را باز کرده و دستور زیر را اجرا کنید:
 ```batch
-iex (Invoke-RestMethod -Uri https://raw.githubusercontent.com/arshiacomplus/V2rayExtractor-local/main/install.bat)
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/arshiacomplus/V2rayExtractor-local/main/install.ps1'))
 ```
 
 مهم: بعد از اتمام نصب، باید یک پنجره ترمینال جدید باز کنید تا بتوانید از دستور جدید استفاده کنید.
