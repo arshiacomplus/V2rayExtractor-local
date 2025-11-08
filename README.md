@@ -42,7 +42,7 @@
 
 ---
 
-![V2L Screenshot](https://user-images.githubusercontent.com/your-github-id/your-repo/path/to/screenshot.png)
+![V2L Screenshot](screenshot.png)
 <!-- TODO: یک اسکرین‌شات از رابط کاربری برنامه بگیر و لینک بالا را جایگزین کن -->
 
 ## ✨ ویژگی‌ها (Features)
