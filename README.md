@@ -42,7 +42,7 @@
 
 ---
 
-![V2L Screenshot](screenshot.png)
+![V2L Screenshot](screenshot.jpg)
 <!-- TODO: یک اسکرین‌شات از رابط کاربری برنامه بگیر و لینک بالا را جایگزین کن -->
 
 ## ✨ ویژگی‌ها (Features)
