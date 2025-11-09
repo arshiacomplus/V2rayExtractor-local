@@ -39,7 +39,7 @@ if [[ -n "$PREFIX" ]]; then
     echo -e "${BLUE}--- V2L Setup / Update Required ---${NC}"
 
     echo "Step 1: Installing system dependencies..."
-    pkg update -y; pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
+    pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
 
     echo "Step 2: Performing a clean installation..."
     rm -rf "$INSTALL_PATH"; rm -f "$LAUNCHER_PATH"
