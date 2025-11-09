@@ -82,7 +82,6 @@ if [[ -n "$PREFIX" ]]; then
     echo "Attempting to install Pydantic from pre-built wheel..."
 
 
-    echo -e "${YELLOW}Warning: pip install for pydantic failed. Attempting fallback to pre-built wheel...${NC}"
     TEMP_WHL_DIR=$(mktemp -d)
     if ( set -e; \
           cd "$TEMP_WHL_DIR"; \
@@ -93,7 +92,6 @@ if [[ -n "$PREFIX" ]]; then
     else
         echo -e "${YELLOW}Fatal: Fallback installation from wheel also failed. Please check your connection or environment.${NC}"
         rm -rf "$TEMP_WHL_DIR"
-        exit 1
     fi
     rm -rf "$TEMP_WHL_DIR"
 
