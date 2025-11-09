@@ -79,6 +79,29 @@ if [[ -n "$PREFIX" ]]; then
     ls -l "$VENDOR_DIR"
 
     echo "Step 4: Installing Python packages..."
+    echo "Attempting to install Pydantic from pre-built wheel..."
+
+    if pip install "pydantic"; then
+        echo -e "${GREEN}Pydantic installed successfully via pip.${NC}"
+    else
+        echo -e "${YELLOW}Warning: pip install for pydantic failed. Attempting fallback to pre-built wheel...${NC}"
+        TEMP_WHL_DIR=$(mktemp -d)
+        if ( set -e; \
+             cd "$TEMP_WHL_DIR"; \
+             curl -# -L -o pydantic.zip "$PYDANTIC_ZIP_URL"; \
+             unzip pydantic.zip; \
+             pip install *.whl; \
+           ); then
+            echo -e "${GREEN}Pydantic installed successfully from wheel.${NC}"
+        else
+            echo -e "${YELLOW}Fatal: Fallback installation from wheel also failed. Please check your connection or environment.${NC}"
+            rm -rf "$TEMP_WHL_DIR"
+            exit 1
+        fi
+        rm -rf "$TEMP_WHL_DIR"
+    fi
+
+    echo "Installing remaining packages from requirements.txt..."
     pip install -r requirements.txt
     if [ -f "$SUB_CHECKER_RENAMED_PATH/requirements.txt" ]; then pip install -r "$SUB_CHECKER_RENAMED_PATH/requirements.txt"; fi
 
