@@ -8,7 +8,7 @@ set -e
 CMD_NAME="v2l"
 REPO="arshiacomplus/V2rayExtractor-local"
 SUB_CHECKER_REPO="arshiacomplus/sub-checker"
-APP_V="1.0.0"
+APP_V="1.0.1"
 CORE_V="1.1"
 
 # --- Core Binary Versions ---
