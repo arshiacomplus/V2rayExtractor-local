@@ -1,4 +1,4 @@
-fastapi
+fastapi==0.121.0
 uvicorn
 beautifulsoup4
 httpx
@@ -7,3 +7,4 @@ requests
 python-v2ray
 python-multipart
 jinja2
+
