@@ -39,16 +39,22 @@ if [[ -n "$PREFIX" ]]; then
     echo -e "${BLUE}--- V2L Setup / Update Required ---${NC}"
 
     echo "Step 1: Installing system dependencies..."
-    pkg install -y python python-pip git curl unzip patchelf build-essential tur-repo python-grpcio
+    pkg install -y python git curl unzip patchelf build-essential tur-repo python-grpcio
 
     echo "Step 2: Performing a clean installation..."
     rm -rf "$INSTALL_PATH"; rm -f "$LAUNCHER_PATH"
 
-    echo "Cloning main application..."; git clone https://github.com/$REPO.git "$INSTALL_PATH"
+    echo "Cloning main application (latest version only)..."
+    git clone --depth 1 https://github.com/$REPO.git "$INSTALL_PATH"
+    echo "Removing .git directory to save space..."
+    rm -rf "$INSTALL_PATH/.git"
     cd "$INSTALL_PATH"
 
-    echo "Cloning sub-checker (full repository)..."
-    git clone https://github.com/$SUB_CHECKER_REPO.git sub-checker
+    echo "Cloning sub-checker (latest version only)..."
+    git clone --depth 1 https://github.com/$SUB_CHECKER_REPO.git sub-checker
+
+    echo "Removing .git directory to save space..."
+    rm -rf sub-checker/.git
 
     echo "Renaming 'sub-checker' to 'sub_checker' for Python import..."
     mv sub-checker sub_checker
