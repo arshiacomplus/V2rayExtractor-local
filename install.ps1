@@ -8,7 +8,7 @@ $Repo = "arshiacomplus/V2rayExtractor-local"
 $CmdName = "v2l"
 $InstallDir = Join-Path $env:APPDATA "V2L_CLI"
 $LauncherPath = Join-Path $InstallDir "$CmdName.exe"
-$AppV = "1.0.0"
+$AppV = "1.0.1"
 $CoreV = "1.1"
 $AppVersionFile = Join-Path $InstallDir ".app_version"
 $CoreVersionFile = Join-Path $InstallDir ".core_version"
@@ -106,4 +106,5 @@ finally {
     # Pause at the end
     Write-Host ""
     Read-Host "Press Enter to exit..."
+
 }
