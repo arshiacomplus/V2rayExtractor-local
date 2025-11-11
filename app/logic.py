@@ -41,7 +41,10 @@ async def scrape_configs_from_url(url: str, client: httpx.AsyncClient) -> List[s
         logging.error(f"Failed to fetch {url}: {e}")
         return []
     soup = BeautifulSoup(response.text, 'html.parser')
-    page_text = soup.get_text('\n')
+
+    content_tags = soup.find_all(['div', 'code', 'blockquote', 'pre'])
+    page_text = "\n".join(tag.get_text('\n') for tag in content_tags)
+
     pattern = r'((?:vmess|vless|ss|trojan|hy2|hysteria2)://[^\s<>"\'`]+)'
     found_configs = re.findall(pattern, page_text)
     logging.info(f"Found {len(found_configs)} configs from {url}")
